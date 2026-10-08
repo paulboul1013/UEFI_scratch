@@ -1,5 +1,25 @@
 #include "uefi.hpp"
 
+static int g_constructor_test = 0;
+
+
+class RuntimeTest {
+public:
+
+    RuntimeTest()
+    {
+        g_constructor_test = 1234;
+    }
+
+    ~RuntimeTest()
+    {
+        g_constructor_test = 0;
+    }
+};
+
+
+RuntimeTest g_runtime_test;
+
 
 extern "C"
 EFI_STATUS efi_main(
@@ -8,6 +28,27 @@ EFI_STATUS efi_main(
 )
 {
     (void)image_handle;
+
+    if (g_constructor_test == 1234) {
+
+        CHAR16 ok[] =
+            L"[OK] Global constructor executed\r\n";
+
+        system_table->ConOut->OutputString(
+            system_table->ConOut,
+            ok
+        );
+
+    } else {
+
+        CHAR16 fail[] =
+            L"[FAIL] Global constructor NOT executed\r\n";
+
+        system_table->ConOut->OutputString(
+            system_table->ConOut,
+            fail
+        );
+    }
 
 
     // --------------------------------------------------------

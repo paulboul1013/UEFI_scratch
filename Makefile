@@ -25,8 +25,8 @@ QEMU     := qemu-system-x86_64
 TARGET       := output/BOOTX64.efi
 ESP_TARGET   := esp/EFI/BOOT/BOOTX64.EFI
 
-SOURCES      := startup.cpp main.cpp
-OBJECTS      := startup.o main.o
+SOURCES      := startup.cpp runtime.cpp main.cpp
+OBJECTS      := startup.o runtime.o main.o
 
 LINKER_SCRIPT := linker.ld
 
@@ -130,8 +130,11 @@ reset-vars:
 # Compile
 # ------------------------------------------------------------
 
-startup.o: startup.cpp uefi.hpp
+startup.o: startup.cpp uefi.hpp runtime.hpp
 	$(CXX) $(CXXFLAGS) -c startup.cpp -o startup.o
+
+runtime.o: runtime.cpp runtime.hpp
+	$(CXX) $(CXXFLAGS) -c runtime.cpp -o runtime.o
 
 main.o: main.cpp uefi.hpp
 	$(CXX) $(CXXFLAGS) -c main.cpp -o main.o
