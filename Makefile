@@ -218,6 +218,19 @@ test: build
 	@$(NM) main.o | grep -qE '[[:space:]]T[[:space:]]+efi_main$$' || { echo "ERROR: main.o does not define efi_main"; exit 1; }
 	@echo "All static checks passed."
 
+# Host checks use fake firmware interfaces. QEMU checks build clean sources.
+HOST_CXX ?= g++
+
+.PHONY: test-host
+test-host:
+	mkdir -p $(OUTPUT_DIR)/tests
+	$(HOST_CXX) -std=c++17 -fshort-wchar -Wall -Wextra tests/gop_host.cpp -o $(OUTPUT_DIR)/tests/gop_host
+	$(OUTPUT_DIR)/tests/gop_host
+
+.PHONY: test-gop
+test-gop:
+	python3 tests/gop_qemu.py
+
 # ------------------------------------------------------------
 # Inspection helpers
 # ------------------------------------------------------------
@@ -279,6 +292,7 @@ debug: build $(OVMF_VARS)
 .PHONY: clean
 clean:
 	rm -f $(OBJECTS)
+	rm -f $(OUTPUT_DIR)/tests/gop_host
 	rm -f main.o.
 	rm -f $(TARGET)
 	rm -f $(ESP_TARGET)
@@ -308,6 +322,8 @@ help:
 	@echo "  make link           Produce output/BOOTX64.efi"
 	@echo "  make esp            Copy EFI image to esp/EFI/BOOT/"
 	@echo "  make test           Run static build/PE/symbol/section checks"
+	@echo "  make test-host      Check GOP success and error paths with host g++"
+	@echo "  make test-gop       Build clean sources and check GOP with QEMU/OVMF"
 	@echo "  make run            Build and boot with QEMU + OVMF"
 	@echo "  make run-clean      Reset OVMF VARS, then boot"
 	@echo "  make debug          Run QEMU with GDB stub (:1234), CPU paused"
