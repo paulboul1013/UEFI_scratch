@@ -1,2 +1,3 @@
 # Preserve raw firmware and tool logs, including their original whitespace.
 docs/artifacts/gop-v2/*.log -text -whitespace
+docs/artifacts/menu-v1/*.log -text -whitespace

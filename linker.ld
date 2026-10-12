@@ -35,6 +35,8 @@ SECTIONS
   .init_array ALIGN(8) :
   {
     __init_array_start = .;
+    /* PE must retain this section even when an image has no constructors. */
+    QUAD(0)
     KEEP(*(.init_array))
     KEEP(*(SORT(.init_array.*)))
     KEEP(*(.ctors))

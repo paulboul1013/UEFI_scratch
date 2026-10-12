@@ -1,0 +1,15 @@
+Final-source menu host sanitizer verification
+Compiler: clang
+Flags: -std=c++17 -fshort-wchar -g -O1 -fno-omit-frame-pointer -fsanitize=address,undefined -Wall -Wextra -Werror
+Execution: outside ptrace sandbox; default LeakSanitizer enabled
+Exit status: 0
+Menu host checks passed: 93 cases (real menu, station, and startup contract).
+
+Source SHA256 before compilation:
+c311792917d3c7dbfdb1ca878c425ba8e63e72bb547f0a45049eca715fe6f3a9  tests/menu_host.cpp
+3af0986a50f4e904c10d006097b6996980c0dc1a757e52ced03c02d764191a59  menu.cpp
+4eb6865b42ed9c90fad028868c101e0aba3705bdcbe2d3eef6bbab56201d70cc  station.cpp
+158315bbc3e6015f560cf77dbce25dde6d0509b05882e17aa53ab4c08e00d09b  uefi.hpp
+08bcc99c02c719f91372b64d400cf7d83b654790dd673dfa4920dc41ed820d48  startup.cpp
+00a66a812bc43b419be8bdfd2902fdcb048acdeff70f285ecf51f426d2e824c1  runtime.hpp
+

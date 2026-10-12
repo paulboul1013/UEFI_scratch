@@ -1,0 +1,17 @@
+Toolchain / OVMF check: OK
+Menu build complete: output/menu/BOOTX64.EFI
+Menu image / ESP / symbols / entry checks passed.
+mkdir -p output/menu/tests
+g++ -std=c++17 -fshort-wchar -Wall -Wextra -Werror tests/menu_host.cpp menu.cpp station.cpp -o output/menu/tests/menu_host
+output/menu/tests/menu_host
+Menu host checks passed: 93 cases (real menu, station, and startup contract).
+python3 tests/menu_qemu.py
+Artifacts: /tmp/uefi-menu-qemu-n3mtpczr
+PASS: clean-source make test-menu-static (/tmp/uefi-menu-qemu-n3mtpczr/build.log)
+PASS: clean-source make test-menu-probe (/tmp/uefi-menu-qemu-n3mtpczr/probe-build.log)
+PASS: production full layout, all seven selections, every child Esc, Reset Cancel/Esc, repeated redraw pixels, Return to Firmware
+PASS: main Esc, independent guest restored attribute=10 cursor=7,3 visible=1, unchanged text/GOP mode, subsequent runtime_fini
+LIMIT: this OVMF console exposes no supported single-column mode; small layout requires host-fixture coverage
+PASS: confirmed Restart caused a QMP guest-reset shutdown using independent ESP/VARS (-no-reboot)
+PASS: real -vga none, Graphics unavailable, serial text navigation and return
+Screenshots are unmodified QMP screendumps; PNG copies require visual review.

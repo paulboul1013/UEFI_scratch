@@ -39,6 +39,16 @@ PROBE_TARGET     := output/tests/GOP_PROBE.efi
 PROBE_ESP_DIR    := output/tests/probe-esp/EFI/BOOT
 PROBE_ESP_TARGET := $(PROBE_ESP_DIR)/BOOTX64.EFI
 
+MENU_DIR        := output/menu
+MENU_OBJECTS    := $(MENU_DIR)/startup.o $(MENU_DIR)/runtime.o $(MENU_DIR)/station.o $(MENU_DIR)/menu.o
+MENU_TARGET     := $(MENU_DIR)/BOOTX64.EFI
+MENU_ESP        := $(MENU_DIR)/esp
+MENU_ESP_TARGET := $(MENU_ESP)/EFI/BOOT/BOOTX64.EFI
+MENU_VARS       := $(MENU_DIR)/OVMF_VARS_4M.fd
+MENU_PROBE_OBJECT := $(MENU_DIR)/tests/menu_qemu_probe.o
+MENU_PROBE_TARGET := $(MENU_DIR)/tests/MENU_PROBE.EFI
+MENU_PROBE_ESP_TARGET := $(MENU_DIR)/tests/probe-esp/EFI/BOOT/BOOTX64.EFI
+
 # ------------------------------------------------------------
 # OVMF
 # ------------------------------------------------------------
@@ -278,6 +288,78 @@ test-host:
 test-gop:
 	python3 tests/gop_qemu.py
 
+# Menu has separate objects, entry point, ESP and writable firmware variables.
+$(MENU_DIR)/%.o: %.cpp uefi.hpp runtime.hpp menu.hpp
+	mkdir -p $(MENU_DIR)
+	$(CXX) $(CXXFLAGS) -Wall -Wextra -Werror -c $< -o $@
+
+$(MENU_TARGET): $(MENU_OBJECTS) $(LINKER_SCRIPT)
+	$(CXX) $(LDFLAGS) $(MENU_OBJECTS) -o $@
+
+$(MENU_ESP_TARGET): $(MENU_TARGET)
+	mkdir -p $(dir $@)
+	cp $< $@
+
+$(MENU_VARS):
+	mkdir -p $(MENU_DIR)
+	cp $(OVMF_VARS_SRC) $@
+
+$(MENU_PROBE_OBJECT): tests/menu_qemu_probe.cpp uefi.hpp menu.hpp runtime.hpp
+	mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -Wall -Wextra -Werror -c $< -o $@
+
+$(MENU_PROBE_TARGET): $(MENU_DIR)/startup.o $(MENU_DIR)/runtime.o $(MENU_DIR)/menu.o $(MENU_PROBE_OBJECT) $(LINKER_SCRIPT)
+	$(CXX) $(LDFLAGS) $(MENU_DIR)/startup.o $(MENU_DIR)/runtime.o $(MENU_DIR)/menu.o $(MENU_PROBE_OBJECT) -o $@
+
+$(MENU_PROBE_ESP_TARGET): $(MENU_PROBE_TARGET)
+	mkdir -p $(dir $@)
+	cp $< $@
+
+.PHONY: build-menu run-menu test-menu-static test-menu-host test-menu-qemu test-menu build-menu-probe test-menu-probe
+build-menu: check-tools $(MENU_ESP_TARGET)
+	@echo "Menu build complete: $(MENU_TARGET)"
+
+run-menu: build-menu $(MENU_VARS)
+	$(QEMU) -m 256M -drive if=pflash,format=raw,readonly=on,file=$(OVMF_CODE_SRC) \
+		-drive if=pflash,format=raw,file=$(MENU_VARS) -drive format=raw,file=fat:rw:$(MENU_ESP)
+
+# Reuse the same assertions for production and the independent guest observer.
+test-menu-static: build-menu
+	@$(MAKE) --no-print-directory menu-image-check MENU_CHECK_TARGET=$(MENU_TARGET) MENU_CHECK_ESP=$(MENU_ESP_TARGET) MENU_CHECK_OBJECT=$(MENU_DIR)/station.o
+
+build-menu-probe: check-tools $(MENU_PROBE_ESP_TARGET)
+	@echo "Menu probe build complete: $(MENU_PROBE_TARGET)"
+
+test-menu-probe: build-menu-probe
+	@$(MAKE) --no-print-directory menu-image-check MENU_CHECK_TARGET=$(MENU_PROBE_TARGET) MENU_CHECK_ESP=$(MENU_PROBE_ESP_TARGET) MENU_CHECK_OBJECT=$(MENU_PROBE_OBJECT)
+
+.PHONY: menu-image-check
+menu-image-check:
+	@file "$(MENU_CHECK_TARGET)" | grep -q 'PE32+' || { echo 'ERROR: menu is not PE32+'; exit 1; }
+	@$(OBJDUMP) -p "$(MENU_CHECK_TARGET)" | grep -qE 'Subsystem[[:space:]]+0000000a' || { echo 'ERROR: menu is not an EFI application'; exit 1; }
+	@cmp "$(MENU_CHECK_TARGET)" "$(MENU_CHECK_ESP)"
+	@$(NM) $(MENU_DIR)/startup.o | grep -qE '[[:space:]]T[[:space:]]+_start$$'
+	@$(NM) $(MENU_DIR)/startup.o | grep -qE '[[:space:]]U[[:space:]]+efi_main$$'
+	@$(NM) "$(MENU_CHECK_OBJECT)" | grep -qE '[[:space:]]T[[:space:]]+efi_main$$'
+	@test "$$($(NM) "$(MENU_CHECK_TARGET)" | grep -cE '[[:space:]]T[[:space:]]+efi_main$$')" -eq 1
+	@! $(OBJDUMP) -p "$(MENU_CHECK_TARGET)" | grep -q 'DLL Name:' || { echo 'ERROR: menu imports a host library'; exit 1; }
+	@entry=$$($(OBJDUMP) -p "$(MENU_CHECK_TARGET)" | awk '$$1 == "AddressOfEntryPoint" { print "0x" $$2 }'); \
+	 base=$$($(OBJDUMP) -p "$(MENU_CHECK_TARGET)" | awk '$$1 == "ImageBase" { print "0x" $$2 }'); \
+	 start=$$($(NM) "$(MENU_CHECK_TARGET)" | awk '$$2 == "T" && $$3 == "_start" { print "0x" $$1 }'); \
+	 test -n "$$entry" && test -n "$$base" && test -n "$$start" && \
+	 test "$$((start - base))" -eq "$$((entry))" || { echo 'ERROR: menu entry point is not _start'; exit 1; }
+	@echo 'Menu image / ESP / symbols / entry checks passed.'
+
+test-menu-host:
+	mkdir -p $(MENU_DIR)/tests
+	$(HOST_CXX) -std=c++17 -fshort-wchar -Wall -Wextra -Werror tests/menu_host.cpp menu.cpp station.cpp -o $(MENU_DIR)/tests/menu_host
+	$(MENU_DIR)/tests/menu_host
+
+test-menu-qemu:
+	python3 tests/menu_qemu.py
+
+test-menu: test-menu-static test-menu-host test-menu-qemu
+
 # ------------------------------------------------------------
 # Inspection helpers
 # ------------------------------------------------------------
@@ -344,6 +426,7 @@ clean:
 	rm -f main.o.
 	rm -f $(TARGET)
 	rm -f $(ESP_TARGET)
+	rm -f $(MENU_OBJECTS) $(MENU_TARGET) $(MENU_ESP_TARGET) $(MENU_PROBE_OBJECT) $(MENU_PROBE_TARGET) $(MENU_PROBE_ESP_TARGET) $(MENU_DIR)/tests/menu_host
 
 .PHONY: distclean
 distclean: clean
@@ -374,6 +457,10 @@ help:
 	@echo "  make test-probe     Validate the separate observer EFI image"
 	@echo "  make test-host      Check GOP success and error paths with host g++"
 	@echo "  make test-gop       Build clean sources and check GOP with QEMU/OVMF"
+	@echo "  make build-menu     Build the independent text menu and ESP"
+	@echo "  make run-menu       Boot the menu with its own OVMF VARS"
+	@echo "  make test-menu      Menu static, host and clean-source QEMU checks"
+	@echo "  make test-menu-static / test-menu-host / test-menu-qemu"
 	@echo "  make run            Build and boot with QEMU + OVMF"
 	@echo "  make run-clean      Reset OVMF VARS, then boot"
 	@echo "  make debug          Run QEMU with GDB stub (:1234), CPU paused"

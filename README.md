@@ -1,7 +1,7 @@
 # UEFI From Scratch
 
 從 Linux / WSL2 以 MinGW 交叉編譯 x86_64 UEFI application，在 QEMU / OVMF 執行。
-目前已完成文字輸出、鍵盤事件、最小 C++ runtime 與 GOP 第二版。
+目前已完成文字輸出、鍵盤事件、最小 C++ runtime、GOP 第二版與第一版文字選單。
 
 ## 快速開始
 
@@ -27,6 +27,17 @@ Press any key to exit...
 ```
 
 ## 驗證
+
+選單使用獨立映像及 ESP，可用以下指令操作：
+
+```bash
+make build-menu
+make run-menu
+make test-menu   # 映像、93 個主機案例、乾淨來源 QEMU 全流程
+```
+
+選單包含七個選項、韌體／GOP 資訊、Reset 確認與返回；開機載入與設定保存列為後續。
+操作與錯誤處理見 [選單文件](docs/knowledge/menu.md)，review 與驗收見 [完成紀錄](docs/history/menu-v1.md)。
 
 ```bash
 make test        # 建置、ABI 與 PE / entry point 檢查

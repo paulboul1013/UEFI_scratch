@@ -8,6 +8,32 @@
 
 本文指令在專案根目錄執行。
 
+## 選單測試
+
+```bash
+make test-menu-static
+make test-menu-host
+make test-menu-qemu
+make test-menu
+```
+
+選單與 GOP 使用不同的 EFI 映像、ESP 及 VARS。選單主機測試有 93 個案例；
+QEMU 從乾淨來源驗證導航、所有子頁、連續重畫、Reset、返回，以及真實 console 恢復與 runtime 清理。
+每次保留新的 `/tmp/uefi-menu-qemu-*` 目錄，包含 build log、serial、QMP 事件、文字畫面與原始 PPM / PNG。
+無 VGA 時使用 serial 注入鍵盤並確認缺少 GOP 的文字操作。單欄布局需由支援該尺寸的真實韌體或主機 fixture 驗證。
+
+GCC 或 Clang 的 sanitizer 可依同一組來源執行：
+
+```bash
+g++ -std=c++17 -fshort-wchar -Wall -Wextra -Werror \
+    -fsanitize=address,undefined -fno-omit-frame-pointer \
+    tests/menu_host.cpp menu.cpp station.cpp -o /tmp/uefi-menu-host-asan
+ASAN_OPTIONS=detect_leaks=1 /tmp/uefi-menu-host-asan
+```
+
+QEMU 的 `/var/tmp` 與 LeakSanitizer 的 ptrace 限制仍依下文權限流程處理。
+操作細節見 [menu.md](menu.md)，多方 review 與本次實際結果見 [選單完成紀錄](../history/menu-v1.md)。
+
 ## 建置與 GOP 測試
 
 ```bash

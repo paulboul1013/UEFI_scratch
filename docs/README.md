@@ -29,6 +29,7 @@
 | Object 如何變成 EFI executable？ | linker.ld、PE32+、section、symbol、relocation、entry point | [Linker、PE32+ 與 Entry Point](knowledge/linker.md) |
 | 全域建構子與清理何時執行？ | _start、efi_main、init_array、atexit、runtime_fini | [C++ runtime 與生命週期](knowledge/runtime.md) |
 | 如何輸出文字並等待鍵盤？ | System Table、ConOut、ConIn、OutputString、WaitForEvent | [System Table、Console 與鍵盤](knowledge/console.md) |
+| 如何操作平台選單、查看韌體資訊或重新啟動？ | menu、選單、ResetSystem、watchdog、Return to Firmware | [UEFI Station 文字選單](knowledge/menu.md) |
 | 如何列舉 GOP、切換模式、恢復與畫色塊？ | QueryMode、FreePool、SetMode、ClearScreen、restore、Blt | [GOP 模式與 BLT 繪圖](knowledge/gop.md) |
 | 如何建立 ESP 與啟動虛擬機？ | FAT、BOOTX64.EFI、OVMF、QEMU、VARS、NVRAM | [ESP、OVMF 與 QEMU](knowledge/qemu.md) |
 | 如何跑測試、看 log 或檢查 PE？ | make test、test-host、test-gop、serial、QMP、PPM、nm、objdump、GDB | [驗證與 Debug](knowledge/testing.md) |
@@ -53,9 +54,16 @@ rg -n 'atexit|constructor|destructor' docs/knowledge
 | 2026-10-08 | 最小 C++ runtime 與清理 | 已完成；`2e45776` | [C++ runtime](history/runtime.md) |
 | 2026-10-08 | GOP 查詢、解析度與三色塊 | 已完成；`6b74ffc` | [GOP 第一版](history/gop-v1.md) |
 | 2026-10-12 | GOP 列舉、800×600、恢復與驗證 | 已完成實作、自動驗收與人工測試 | [GOP 第二版](history/gop-v2.md) · [核定計畫](history/gop-v2-plan.md) |
+| 2026-10-12 | 文字選單、資訊頁、Reset 與 console 恢復 | 已完成實作、多 agent review 與交叉驗證 | [選單第一版](history/menu-v1.md) · [規格與計畫](plans/menu-v1.md) |
 
 Commit 是當時程式的依據。文件內連到工作目錄的原始碼，則是目前版本。
 歷史驗收結果不能當成每次文件更新後都重新執行的測試結果。
+
+## 待實作計畫
+
+| 計畫 | 狀態 | 內容 |
+|---|---|---|
+| 無 | — | 選單第一版已完成，規格仍保留於原 [計畫路徑](plans/menu-v1.md) |
 
 ## 尚未實作的方向
 

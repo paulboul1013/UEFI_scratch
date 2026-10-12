@@ -1,0 +1,65 @@
+make: Warning: File 'Makefile' has modification time 0.65 s in the future
+Toolchain / OVMF check: OK
+
+Build complete:
+  output/BOOTX64.efi
+  esp/EFI/BOOT/BOOTX64.EFI
+
+========== FILE FORMAT ==========
+output/BOOTX64.efi: PE32+ executable (EFI application) x86-64 (stripped to external PDB), for MS Windows, 5 sections
+esp/EFI/BOOT/BOOTX64.EFI: PE32+ executable (EFI application) x86-64 (stripped to external PDB), for MS Windows, 5 sections
+
+========== REQUIRED SYMBOLS ==========
+0000000000000000 T _start
+                 U efi_main
+0000000000001773 T efi_main
+
+Expected relationship:
+  startup.o : T _start
+  startup.o : U efi_main
+  main.o    : T efi_main
+
+========== PE HEADER ==========
+output/BOOTX64.efi:     file format pei-x86-64
+AddressOfEntryPoint	0000000000001000
+ImageBase		0000000000400000
+MajorSubsystemVersion	5
+MinorSubsystemVersion	2
+Subsystem		0000000a	(EFI application)
+[102](sec -1)(fl 0x00)(ty    0)(scl   2) (nx 0) 0x0000000000400000 __ImageBase
+
+========== SECTIONS ==========
+
+output/BOOTX64.efi:     file format pei-x86-64
+
+Sections:
+Idx Name          Size      VMA               LMA               File off  Algn
+  0 .text         00001c20  0000000000401000  0000000000401000  00000400  2**4
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+  1 .init_ar      00000010  0000000000402c20  0000000000402c20  00002200  2**2
+                  CONTENTS, ALLOC, LOAD, DATA
+  2 .rdata        000005d0  0000000000403000  0000000000403000  00002400  2**4
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  3 .bss          00000130  0000000000404000  0000000000404000  00000000  2**4
+                  ALLOC
+  4 .reloc        00000018  0000000000405000  0000000000405000  00002a00  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+
+========== ESP ==========
+esp/EFI/BOOT/BOOTX64.EFI
+
+========== RESULT ==========
+All static checks passed.
+mkdir -p output/tests
+g++ -std=c++17 -fshort-wchar -Wall -Wextra tests/gop_host.cpp -o output/tests/gop_host
+output/tests/gop_host
+GOP host checks passed: 114 cases (real application and startup contract).
+python3 tests/gop_qemu.py
+Artifacts: /tmp/uefi-gop-qemu-3qbqr58f
+PASS: make test from clean sources (/tmp/uefi-gop-qemu-3qbqr58f/build.log)
+PASS: make test-probe from clean sources (/tmp/uefi-gop-qemu-3qbqr58f/probe-build.log)
+PASS: production, 800x600, RGB rectangles, stable wait, keyboard return
+PASS: guest probe, 800x600, RGB rectangles, stable wait, keyboard return
+PASS: independent guest observed restored mode=0 1280x800 format=1 after application return and before runtime_fini
+PASS: -vga none, EFI_NOT_FOUND, immediate firmware return
+make: warning:  Clock skew detected.  Your build may be incomplete.

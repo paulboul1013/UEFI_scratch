@@ -10,6 +10,7 @@ using UINT16 = unsigned short;
 using UINT32 = unsigned int;
 using UINT64 = unsigned long long;
 using UINTN  = unsigned long long;
+using INT32 = int;
 
 using BOOLEAN = UINT8;
 
@@ -31,6 +32,8 @@ struct EFI_GUID {
 #define EFI_SUCCESS 0
 
 constexpr EFI_STATUS EFI_UNSUPPORTED = (1ULL << 63) | 3;
+constexpr EFI_STATUS EFI_INVALID_PARAMETER = (1ULL << 63) | 2;
+constexpr EFI_STATUS EFI_NOT_READY = (1ULL << 63) | 6;
 constexpr EFI_STATUS EFI_DEVICE_ERROR = (1ULL << 63) | 7;
 constexpr EFI_STATUS EFI_NOT_FOUND = (1ULL << 63) | 14;
 
@@ -120,14 +123,67 @@ using EFI_GENERIC_FN = void (EFIAPI *)();
 using EFI_TEXT_CLEAR_SCREEN =
     EFI_STATUS (EFIAPI *)(EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This);
 
+using EFI_TEXT_QUERY_MODE = EFI_STATUS (EFIAPI *)(
+    EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This, UINTN ModeNumber, UINTN *Columns, UINTN *Rows);
+using EFI_TEXT_SET_MODE = EFI_STATUS (EFIAPI *)(
+    EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This, UINTN ModeNumber);
+using EFI_TEXT_SET_ATTRIBUTE = EFI_STATUS (EFIAPI *)(
+    EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This, UINTN Attribute);
+using EFI_TEXT_SET_CURSOR_POSITION = EFI_STATUS (EFIAPI *)(
+    EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This, UINTN Column, UINTN Row);
+using EFI_TEXT_ENABLE_CURSOR = EFI_STATUS (EFIAPI *)(
+    EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This, BOOLEAN Visible);
+
+struct EFI_SIMPLE_TEXT_OUTPUT_MODE {
+    INT32 MaxMode;
+    INT32 Mode;
+    INT32 Attribute;
+    INT32 CursorColumn;
+    INT32 CursorRow;
+    BOOLEAN CursorVisible;
+};
+
+constexpr UINTN EFI_BLACK = 0;
+constexpr UINTN EFI_BLUE = 1;
+constexpr UINTN EFI_LIGHTGRAY = 7;
+constexpr UINTN EFI_WHITE = 15;
+constexpr UINT16 SCAN_UP = 0x01;
+constexpr UINT16 SCAN_DOWN = 0x02;
+constexpr UINT16 SCAN_ESC = 0x17;
+
 struct EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL {
     EFI_TEXT_RESET Reset;
     EFI_TEXT_STRING OutputString;
     EFI_GENERIC_FN TestString;
-    EFI_GENERIC_FN QueryMode;
-    EFI_GENERIC_FN SetMode;
-    EFI_GENERIC_FN SetAttribute;
+    EFI_TEXT_QUERY_MODE QueryMode;
+    EFI_TEXT_SET_MODE SetMode;
+    EFI_TEXT_SET_ATTRIBUTE SetAttribute;
     EFI_TEXT_CLEAR_SCREEN ClearScreen;
+    EFI_TEXT_SET_CURSOR_POSITION SetCursorPosition;
+    EFI_TEXT_ENABLE_CURSOR EnableCursor;
+    EFI_SIMPLE_TEXT_OUTPUT_MODE *Mode;
+};
+
+// Runtime Services through ResetSystem, in the UEFI-defined order.
+enum EFI_RESET_TYPE : UINT32 {
+    EfiResetCold, EfiResetWarm, EfiResetShutdown, EfiResetPlatformSpecific
+};
+using EFI_RESET_SYSTEM = void (EFIAPI *)(
+    EFI_RESET_TYPE ResetType, EFI_STATUS ResetStatus, UINTN DataSize, void *ResetData);
+
+struct EFI_RUNTIME_SERVICES {
+    EFI_TABLE_HEADER Hdr;
+    EFI_GENERIC_FN GetTime;
+    EFI_GENERIC_FN SetTime;
+    EFI_GENERIC_FN GetWakeupTime;
+    EFI_GENERIC_FN SetWakeupTime;
+    EFI_GENERIC_FN SetVirtualAddressMap;
+    EFI_GENERIC_FN ConvertPointer;
+    EFI_GENERIC_FN GetVariable;
+    EFI_GENERIC_FN GetNextVariableName;
+    EFI_GENERIC_FN SetVariable;
+    EFI_GENERIC_FN GetNextHighMonotonicCount;
+    EFI_RESET_SYSTEM ResetSystem;
 };
 
 
@@ -248,6 +304,9 @@ using EFI_LOCATE_PROTOCOL =
         void **Interface
     );
 
+using EFI_SET_WATCHDOG_TIMER = EFI_STATUS (EFIAPI *)(
+    UINTN Timeout, UINT64 WatchdogCode, UINTN DataSize, CHAR16 *WatchdogData);
+
 
 struct EFI_BOOT_SERVICES {
     EFI_TABLE_HEADER Hdr;
@@ -293,7 +352,7 @@ struct EFI_BOOT_SERVICES {
     // Miscellaneous Services
     EFI_GENERIC_FN GetNextMonotonicCount;
     EFI_GENERIC_FN Stall;
-    EFI_GENERIC_FN SetWatchdogTimer;
+    EFI_SET_WATCHDOG_TIMER SetWatchdogTimer;
 
     // Driver Support Services
     EFI_GENERIC_FN ConnectController;
@@ -371,10 +430,24 @@ static_assert(
 
 // GOP 與 Boot Services 的 x86_64 ABI 驗收值。
 static_assert(sizeof(EFI_GUID) == 16);
+static_assert(sizeof(CHAR16) == 2);
+static_assert(sizeof(EFI_SIMPLE_TEXT_OUTPUT_MODE) == 24);
+static_assert(__builtin_offsetof(EFI_SIMPLE_TEXT_OUTPUT_MODE, CursorVisible) == 20);
+static_assert(__builtin_offsetof(EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL, QueryMode) == 24);
+static_assert(__builtin_offsetof(EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL, SetAttribute) == 40);
+static_assert(__builtin_offsetof(EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL, SetCursorPosition) == 56);
+static_assert(__builtin_offsetof(EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL, EnableCursor) == 64);
+static_assert(__builtin_offsetof(EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL, Mode) == 72);
+static_assert(sizeof(EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL) == 80);
+static_assert(sizeof(EFI_RESET_TYPE) == 4);
+static_assert(__builtin_offsetof(EFI_RUNTIME_SERVICES, ResetSystem) == 104);
+static_assert(sizeof(EFI_RUNTIME_SERVICES) == 112);
+static_assert(__builtin_offsetof(EFI_SYSTEM_TABLE, RuntimeServices) == 88);
 static_assert(__builtin_offsetof(EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL, Reset) == 0);
 static_assert(__builtin_offsetof(EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL, OutputString) == 8);
 static_assert(__builtin_offsetof(EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL, ClearScreen) == 48);
 static_assert(__builtin_offsetof(EFI_BOOT_SERVICES, FreePool) == 72);
+static_assert(__builtin_offsetof(EFI_BOOT_SERVICES, SetWatchdogTimer) == 256);
 static_assert(sizeof(EFI_GRAPHICS_PIXEL_FORMAT) == 4);
 static_assert(sizeof(EFI_GRAPHICS_OUTPUT_BLT_OPERATION) == 4);
 static_assert(sizeof(EFI_GRAPHICS_OUTPUT_BLT_PIXEL) == 4);
