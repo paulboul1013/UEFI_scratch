@@ -115,10 +115,19 @@ using EFI_TEXT_STRING =
         CHAR16 *String
     );
 
+// 未呼叫的方法只保留指標，以維持規格中的欄位順序。
+using EFI_GENERIC_FN = void (EFIAPI *)();
+using EFI_TEXT_CLEAR_SCREEN =
+    EFI_STATUS (EFIAPI *)(EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This);
 
 struct EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL {
     EFI_TEXT_RESET Reset;
     EFI_TEXT_STRING OutputString;
+    EFI_GENERIC_FN TestString;
+    EFI_GENERIC_FN QueryMode;
+    EFI_GENERIC_FN SetMode;
+    EFI_GENERIC_FN SetAttribute;
+    EFI_TEXT_CLEAR_SCREEN ClearScreen;
 };
 
 
@@ -221,9 +230,8 @@ struct EFI_GRAPHICS_OUTPUT_PROTOCOL {
 // Boot Services
 // ============================================================
 
-// 未使用的 function pointer 只用來保持正確 layout。
-using EFI_GENERIC_FN =
-    void (EFIAPI *)();
+// 只有成功 QueryMode 交付的非空配置才可用 FreePool 釋放。
+using EFI_FREE_POOL = EFI_STATUS (EFIAPI *)(void *Buffer);
 
 
 using EFI_WAIT_FOR_EVENT =
@@ -253,7 +261,7 @@ struct EFI_BOOT_SERVICES {
     EFI_GENERIC_FN FreePages;
     EFI_GENERIC_FN GetMemoryMap;
     EFI_GENERIC_FN AllocatePool;
-    EFI_GENERIC_FN FreePool;
+    EFI_FREE_POOL FreePool;
 
     // Event & Timer Services
     EFI_GENERIC_FN CreateEvent;
@@ -363,6 +371,10 @@ static_assert(
 
 // GOP 與 Boot Services 的 x86_64 ABI 驗收值。
 static_assert(sizeof(EFI_GUID) == 16);
+static_assert(__builtin_offsetof(EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL, Reset) == 0);
+static_assert(__builtin_offsetof(EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL, OutputString) == 8);
+static_assert(__builtin_offsetof(EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL, ClearScreen) == 48);
+static_assert(__builtin_offsetof(EFI_BOOT_SERVICES, FreePool) == 72);
 static_assert(sizeof(EFI_GRAPHICS_PIXEL_FORMAT) == 4);
 static_assert(sizeof(EFI_GRAPHICS_OUTPUT_BLT_OPERATION) == 4);
 static_assert(sizeof(EFI_GRAPHICS_OUTPUT_BLT_PIXEL) == 4);

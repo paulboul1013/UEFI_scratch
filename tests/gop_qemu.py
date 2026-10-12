@@ -16,7 +16,7 @@ import time
 REPO = Path(__file__).resolve().parents[1]
 SOURCES = (
     "Makefile", "linker.ld", "uefi.hpp", "runtime.hpp",
-    "startup.cpp", "runtime.cpp", "main.cpp",
+    "startup.cpp", "runtime.cpp", "main.cpp", "tests/gop_qemu_probe.cpp",
 )
 COLORS = (b"\xff\x00\x00", b"\x00\xff\x00", b"\x00\x00\xff")
 
@@ -27,10 +27,10 @@ def require(condition, message):
 
 
 class Qemu:
-    def __init__(self, directory, build, args, no_vga=False):
+    def __init__(self, directory, esp, args, no_vga=False):
         self.directory = directory
         directory.mkdir()
-        shutil.copytree(build / "esp", directory / "esp")
+        shutil.copytree(esp, directory / "esp")
         shutil.copyfile(args.ovmf_vars, directory / "vars.fd")
         self.serial = directory / "serial.log"
         self.errors = (directory / "qemu.log").open("w")
@@ -87,7 +87,7 @@ class Qemu:
 
     def text(self):
         data = self.serial.read_text(errors="replace") if self.serial.exists() else ""
-        for failure in ("[FAIL]", "!!!!", "Exception Type"):
+        for failure in ("[FAIL]", "!!!!", "Exception Type", "[PROBE] RESTORE_FAILED"):
             require(failure not in data, f"Firmware failure: {failure}")
         return data
 
@@ -170,8 +170,8 @@ def firmware_menu(data):
     return "Device Manager" in data and "Boot Maintenance Manager" in data
 
 
-def positive(directory, build, args):
-    vm = Qemu(directory, build, args)
+def positive(directory, esp, args, probe=False):
+    vm = Qemu(directory, esp, args)
     try:
         vm.start()
         before = vm.wait_for(lambda data: "[GOP] DRAW_OK" in data, args.timeout, "DRAW_OK")
@@ -181,18 +181,52 @@ def positive(directory, build, args):
         require("[GOP] ERROR" not in before, "GOP reported an error")
         resolution = re.search(r"\[GOP\] RESOLUTION (\d+)x(\d+)", before)
         require(resolution is not None, "Resolution message missing")
-        screen = vm.screenshot("before-key.ppm")
+        require(tuple(map(int, resolution.groups())) == (800, 600),
+                "The 800x600 acceptance case did not pass; fallback is not sufficient")
+        original = re.search(r"\[GOP\] ORIGINAL mode=(\d+) (\d+)x(\d+)", before)
+        active = re.search(r"\[GOP\] ACTIVE mode=(\d+) format=(RGB|BGR|BITMASK|BLT_ONLY)", before)
+        require(original is not None and active is not None, "Mode summaries missing")
+        if probe:
+            require(tuple(map(int, original.groups()[1:])) != (800, 600),
+                    "Probe started in 800x600; this run cannot verify switching and restoration")
+            require(original.group(1) != active.group(1), "Probe did not select a different mode")
+        # Require visible console pixels before accepting screenshot evidence.
+        # The threshold excludes a lone cursor; inspect text legibility too.
+        display_deadline = time.monotonic() + 5
+        while True:
+            screen = vm.screenshot("before-key.ppm")
+            upper_half = screen[2][:screen[0] * (screen[1] // 2) * 3]
+            if sum(channel != 0 for channel in upper_half) > 1000:
+                break
+            require(time.monotonic() < display_deadline,
+                    "Console text never became visible in the screenshot")
+            time.sleep(0.1)
         require(screen[:2] == tuple(map(int, resolution.groups())),
                 "Reported resolution differs from the screenshot")
         boxes = check_blocks(screen)
         time.sleep(1)
         stable = vm.screenshot("waiting.ppm")
+        require(stable[:2] == screen[:2], "The resolution changed before key input")
         require(check_blocks(stable) == boxes, "The blocks changed before key input")
         require(vm.text() == before, "Unexpected console output before key input")
 
         # Observe firmware output that starts after the application marker.
         vm.command("human-monitor-command", {"command-line": "sendkey spc"})
-        vm.wait_for(lambda data: firmware_menu(data[len(before):]), args.timeout, "firmware menu")
+        if probe:
+            returned = vm.wait_for(lambda data: "[PROBE] RESTORE_VERIFIED" in data,
+                                   args.timeout, "independent guest restoration verification")
+            verified = re.search(
+                r"\[PROBE\] RESTORE_VERIFIED mode=(\d+) (\d+)x(\d+) "
+                r"format=([0-3]) status=0x0000000000000000", returned)
+            require(verified is not None, "Guest probe did not confirm EFI_SUCCESS and a valid mode")
+            require(verified.groups()[:3] == original.groups(),
+                    "Guest probe restored mode differs from the application's original scalar summary")
+            require("[GOP] ERROR" not in returned, "Application reported an error before probe return")
+            require(returned.index("[GOP] DRAW_OK") < returned.index("[PROBE] RESTORE_VERIFIED"),
+                    "Guest verification appeared before the drawing marker")
+        returned = vm.wait_for(lambda data: firmware_menu(data[len(before):]),
+                               args.timeout, "firmware menu")
+        require("[GOP] ERROR" not in returned, "Application reported an error after key input")
         time.sleep(1)
         after = vm.screenshot("after-key.ppm")
         require(after != stable, "The screen did not change after key input")
@@ -202,13 +236,18 @@ def positive(directory, build, args):
                 x, y = (left + right) // 2, (top + bottom) // 2
                 offset = (y * after[0] + x) * 3
                 require(after[2][offset:offset + 3] != color, "A block remains after firmware return")
-        print(f"PASS: {screen[0]}x{screen[1]}, RGB rectangles, stable wait, keyboard return", flush=True)
+        label = "guest probe" if probe else "production"
+        print(f"PASS: {label}, {screen[0]}x{screen[1]}, RGB rectangles, stable wait, keyboard return", flush=True)
+        if probe:
+            print(f"PASS: independent guest observed restored mode={verified.group(1)} "
+                  f"{verified.group(2)}x{verified.group(3)} format={verified.group(4)} "
+                  "after application return and before runtime_fini", flush=True)
     finally:
         vm.close()
 
 
-def negative(directory, build, args):
-    vm = Qemu(directory, build, args, no_vga=True)
+def negative(directory, esp, args):
+    vm = Qemu(directory, esp, args, no_vga=True)
     try:
         vm.start()
         data = vm.wait_for(lambda text: "[GOP] ERROR" in text or "[GOP] FOUND" in text,
@@ -229,6 +268,22 @@ def negative(directory, build, args):
         vm.close()
 
 
+def clean_build(artifacts, name, log_name, target, args):
+    build = artifacts / name
+    build.mkdir()
+    for name in SOURCES:
+        destination = build / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(REPO / name, destination)
+    with (artifacts / log_name).open("w") as log:
+        subprocess.run(["make", target, f"OVMF_CODE_SRC={args.ovmf_code}",
+                        f"OVMF_VARS_SRC={args.ovmf_vars}"],
+                       cwd=build, stdout=log, stderr=subprocess.STDOUT,
+                       check=True, timeout=60)
+    print(f"PASS: make {target} from clean sources ({artifacts / log_name})", flush=True)
+    return build
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--timeout", type=float, default=45, help="Boot deadline in seconds per case")
@@ -241,18 +296,11 @@ def main():
     require(args.ovmf_code.is_file() and args.ovmf_vars.is_file(), "OVMF firmware files missing")
     artifacts = Path(tempfile.mkdtemp(prefix="uefi-gop-qemu-", dir="/tmp"))
     print(f"Artifacts: {artifacts}", flush=True)
-    build = artifacts / "build"
-    build.mkdir()
-    for name in SOURCES:
-        shutil.copyfile(REPO / name, build / name)
-    with (artifacts / "build.log").open("w") as log:
-        subprocess.run(["make", "test", f"OVMF_CODE_SRC={args.ovmf_code}",
-                        f"OVMF_VARS_SRC={args.ovmf_vars}"],
-                       cwd=build, stdout=log, stderr=subprocess.STDOUT,
-                       check=True, timeout=60)
-    print("PASS: make test from clean sources", flush=True)
-    positive(artifacts / "positive", build, args)
-    negative(artifacts / "no-vga", build, args)
+    build = clean_build(artifacts, "build", "build.log", "test", args)
+    probe_build = clean_build(artifacts, "probe-build", "probe-build.log", "test-probe", args)
+    positive(artifacts / "positive", build / "esp", args)
+    positive(artifacts / "probe", probe_build / "output/tests/probe-esp", args, probe=True)
+    negative(artifacts / "no-vga", build / "esp", args)
 
 
 if __name__ == "__main__":

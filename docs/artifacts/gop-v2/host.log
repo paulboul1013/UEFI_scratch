@@ -1,0 +1,7 @@
+$ make test-host
+mkdir -p output/tests
+g++ -std=c++17 -fshort-wchar -Wall -Wextra tests/gop_host.cpp -o output/tests/gop_host
+output/tests/gop_host
+GOP host checks passed: 114 cases (real application and startup contract).
+
+exit=0

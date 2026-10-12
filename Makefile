@@ -33,6 +33,12 @@ LINKER_SCRIPT := linker.ld
 OUTPUT_DIR   := output
 ESP_DIR      := esp/EFI/BOOT
 
+# Guest observer has its own object, EFI image and ESP; main.o stays production-only.
+PROBE_OBJECT     := output/tests/gop_qemu_probe.o
+PROBE_TARGET     := output/tests/GOP_PROBE.efi
+PROBE_ESP_DIR    := output/tests/probe-esp/EFI/BOOT
+PROBE_ESP_TARGET := $(PROBE_ESP_DIR)/BOOTX64.EFI
+
 # ------------------------------------------------------------
 # OVMF
 # ------------------------------------------------------------
@@ -139,6 +145,21 @@ runtime.o: runtime.cpp runtime.hpp
 main.o: main.cpp uefi.hpp
 	$(CXX) $(CXXFLAGS) -c main.cpp -o main.o
 
+$(PROBE_OBJECT): tests/gop_qemu_probe.cpp main.cpp uefi.hpp
+	mkdir -p $(dir $(PROBE_OBJECT))
+	$(CXX) $(CXXFLAGS) -c tests/gop_qemu_probe.cpp -o $(PROBE_OBJECT)
+
+$(PROBE_TARGET): startup.o runtime.o $(PROBE_OBJECT) $(LINKER_SCRIPT)
+	$(CXX) $(LDFLAGS) startup.o runtime.o $(PROBE_OBJECT) -o $(PROBE_TARGET)
+
+$(PROBE_ESP_TARGET): $(PROBE_TARGET)
+	mkdir -p $(PROBE_ESP_DIR)
+	cp $(PROBE_TARGET) $(PROBE_ESP_TARGET)
+
+.PHONY: build-probe
+build-probe: check-tools $(PROBE_ESP_TARGET)
+	@echo "Guest probe build complete: $(PROBE_TARGET)"
+
 .PHONY: compile
 compile: $(OBJECTS)
 
@@ -213,10 +234,36 @@ test: build
 	@test -f "$(ESP_TARGET)"
 	@file "$(TARGET)" | grep -q "PE32+" || { echo "ERROR: output is not PE32+"; exit 1; }
 	@file "$(TARGET)" | grep -qi "EFI application" || { echo "ERROR: output is not marked EFI application"; exit 1; }
+	@cmp "$(TARGET)" "$(ESP_TARGET)"
 	@$(NM) startup.o | grep -qE '[[:space:]]T[[:space:]]+_start$$' || { echo "ERROR: startup.o does not define _start"; exit 1; }
 	@$(NM) startup.o | grep -qE '[[:space:]]U[[:space:]]+efi_main$$' || { echo "ERROR: startup.o does not reference efi_main"; exit 1; }
 	@$(NM) main.o | grep -qE '[[:space:]]T[[:space:]]+efi_main$$' || { echo "ERROR: main.o does not define efi_main"; exit 1; }
+	@entry=$$($(OBJDUMP) -p $(TARGET) | awk '$$1 == "AddressOfEntryPoint" { print "0x" $$2 }'); \
+	 base=$$($(OBJDUMP) -p $(TARGET) | awk '$$1 == "ImageBase" { print "0x" $$2 }'); \
+	 start=$$($(NM) $(TARGET) | awk '$$2 == "T" && $$3 == "_start" { print "0x" $$1 }'); \
+	 test -n "$$entry" && test -n "$$base" && test -n "$$start" || { echo "ERROR: entry-point metadata missing"; exit 1; }; \
+	 test "$$((start - base))" -eq "$$((entry))" || { echo "ERROR: EFI entry point is not _start"; exit 1; }
 	@echo "All static checks passed."
+
+# Probe checks use the wrapper object; no main.o symbol assumptions apply here.
+.PHONY: test-probe
+test-probe: build-probe
+	@file $(PROBE_TARGET) $(PROBE_ESP_TARGET)
+	@$(OBJDUMP) -x $(PROBE_TARGET) | grep -E 'file format|AddressOfEntryPoint|ImageBase|Subsystem'
+	@$(OBJDUMP) -h $(PROBE_TARGET)
+	@file "$(PROBE_TARGET)" | grep -q "PE32+" || { echo "ERROR: probe is not PE32+"; exit 1; }
+	@file "$(PROBE_TARGET)" | grep -qi "EFI application" || { echo "ERROR: probe is not marked EFI application"; exit 1; }
+	@cmp "$(PROBE_TARGET)" "$(PROBE_ESP_TARGET)"
+	@$(NM) startup.o | grep -qE '[[:space:]]T[[:space:]]+_start$$' || { echo "ERROR: startup.o does not define _start"; exit 1; }
+	@$(NM) startup.o | grep -qE '[[:space:]]U[[:space:]]+efi_main$$' || { echo "ERROR: startup.o does not reference efi_main"; exit 1; }
+	@$(NM) $(PROBE_OBJECT) | grep -qE '[[:space:]]T[[:space:]]+efi_main$$' || { echo "ERROR: probe does not define wrapper efi_main"; exit 1; }
+	@$(NM) $(PROBE_OBJECT) | grep -qE '[[:space:]]T[[:space:]]+gop_probe_application$$' || { echo "ERROR: probe does not contain the real application"; exit 1; }
+	@entry=$$($(OBJDUMP) -p $(PROBE_TARGET) | awk '$$1 == "AddressOfEntryPoint" { print "0x" $$2 }'); \
+	 base=$$($(OBJDUMP) -p $(PROBE_TARGET) | awk '$$1 == "ImageBase" { print "0x" $$2 }'); \
+	 start=$$($(NM) $(PROBE_TARGET) | awk '$$2 == "T" && $$3 == "_start" { print "0x" $$1 }'); \
+	 test -n "$$entry" && test -n "$$base" && test -n "$$start" || { echo "ERROR: probe entry-point metadata missing"; exit 1; }; \
+	 test "$$((start - base))" -eq "$$((entry))" || { echo "ERROR: probe EFI entry point is not _start"; exit 1; }
+	@echo "All guest probe static checks passed."
 
 # Host checks use fake firmware interfaces. QEMU checks build clean sources.
 HOST_CXX ?= g++
@@ -292,6 +339,7 @@ debug: build $(OVMF_VARS)
 .PHONY: clean
 clean:
 	rm -f $(OBJECTS)
+	rm -f $(PROBE_OBJECT) $(PROBE_TARGET) $(PROBE_ESP_TARGET)
 	rm -f $(OUTPUT_DIR)/tests/gop_host
 	rm -f main.o.
 	rm -f $(TARGET)
@@ -322,6 +370,8 @@ help:
 	@echo "  make link           Produce output/BOOTX64.efi"
 	@echo "  make esp            Copy EFI image to esp/EFI/BOOT/"
 	@echo "  make test           Run static build/PE/symbol/section checks"
+	@echo "  make build-probe    Build test-only guest restoration observer"
+	@echo "  make test-probe     Validate the separate observer EFI image"
 	@echo "  make test-host      Check GOP success and error paths with host g++"
 	@echo "  make test-gop       Build clean sources and check GOP with QEMU/OVMF"
 	@echo "  make run            Build and boot with QEMU + OVMF"

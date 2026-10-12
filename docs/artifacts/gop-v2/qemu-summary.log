@@ -1,0 +1,7 @@
+Artifacts: /tmp/uefi-gop-qemu-r5hwof8v
+PASS: make test from clean sources (/tmp/uefi-gop-qemu-r5hwof8v/build.log)
+PASS: make test-probe from clean sources (/tmp/uefi-gop-qemu-r5hwof8v/probe-build.log)
+PASS: production, 800x600, RGB rectangles, stable wait, keyboard return
+PASS: guest probe, 800x600, RGB rectangles, stable wait, keyboard return
+PASS: independent guest observed restored mode=0 1280x800 format=1 after application return and before runtime_fini
+PASS: -vga none, EFI_NOT_FOUND, immediate firmware return

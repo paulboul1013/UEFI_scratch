@@ -1,0 +1,12 @@
+{
+  "date": "2026-10-12",
+  "versions": [
+    "g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+    "x86_64-w64-mingw32-g++ (GCC) 13-posix",
+    "QEMU emulator version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.18)"
+  ],
+  "firmware_sha256": {
+    "/usr/share/OVMF/OVMF_CODE_4M.fd": "ad23261d43116abc3747d59a7837fbf578c9586a8993f4eeba064cd07eccb083",
+    "/usr/share/OVMF/OVMF_VARS_4M.fd": "5d2ac383371b408398accee7ec27c8c09ea5b74a0de0ceea6513388b15be5d1e"
+  }
+}

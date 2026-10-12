@@ -1,0 +1,58 @@
+Toolchain / OVMF check: OK
+x86_64-w64-mingw32-g++ -nostdlib -ffreestanding -fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-asynchronous-unwind-tables -fno-stack-protector -mno-red-zone -fPIC -fPIE -fshort-wchar -c startup.cpp -o startup.o
+x86_64-w64-mingw32-g++ -nostdlib -ffreestanding -fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-asynchronous-unwind-tables -fno-stack-protector -mno-red-zone -fPIC -fPIE -fshort-wchar -c runtime.cpp -o runtime.o
+x86_64-w64-mingw32-g++ -nostdlib -ffreestanding -fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-asynchronous-unwind-tables -fno-stack-protector -mno-red-zone -fPIC -fPIE -fshort-wchar -c main.cpp -o main.o
+mkdir -p output
+x86_64-w64-mingw32-g++ -nostdlib -ffreestanding -Wl,-T,linker.ld -Wl,--image-base,0x400000 -Wl,-m,i386pep -Wl,--subsystem,10 -Wl,-e,_start startup.o runtime.o main.o -o output/BOOTX64.efi
+mkdir -p esp/EFI/BOOT
+cp output/BOOTX64.efi esp/EFI/BOOT/BOOTX64.EFI
+
+Build complete:
+  output/BOOTX64.efi
+  esp/EFI/BOOT/BOOTX64.EFI
+
+========== FILE FORMAT ==========
+output/BOOTX64.efi: PE32+ executable (EFI application) x86-64 (stripped to external PDB), for MS Windows, 5 sections
+esp/EFI/BOOT/BOOTX64.EFI: PE32+ executable (EFI application) x86-64 (stripped to external PDB), for MS Windows, 5 sections
+
+========== REQUIRED SYMBOLS ==========
+0000000000000000 T _start
+                 U efi_main
+0000000000001773 T efi_main
+
+Expected relationship:
+  startup.o : T _start
+  startup.o : U efi_main
+  main.o    : T efi_main
+
+========== PE HEADER ==========
+output/BOOTX64.efi:     file format pei-x86-64
+AddressOfEntryPoint	0000000000001000
+ImageBase		0000000000400000
+MajorSubsystemVersion	5
+MinorSubsystemVersion	2
+Subsystem		0000000a	(EFI application)
+[ 84](sec -1)(fl 0x00)(ty    0)(scl   2) (nx 0) 0x0000000000400000 __ImageBase
+
+========== SECTIONS ==========
+
+output/BOOTX64.efi:     file format pei-x86-64
+
+Sections:
+Idx Name          Size      VMA               LMA               File off  Algn
+  0 .text         00001c20  0000000000401000  0000000000401000  00000400  2**4
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+  1 .init_ar      00000008  0000000000402c20  0000000000402c20  00002200  2**2
+                  CONTENTS, ALLOC, LOAD, DATA
+  2 .rdata        00000570  0000000000403000  0000000000403000  00002400  2**4
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  3 .bss          00000130  0000000000404000  0000000000404000  00000000  2**4
+                  ALLOC
+  4 .reloc        00000018  0000000000405000  0000000000405000  00002a00  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+
+========== ESP ==========
+esp/EFI/BOOT/BOOTX64.EFI
+
+========== RESULT ==========
+All static checks passed.

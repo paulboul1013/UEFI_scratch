@@ -1,0 +1,11 @@
+$ g++ -std=c++17 -fshort-wchar -Wall -Wextra -Werror -fsanitize=address,undefined -fno-omit-frame-pointer -g tests/gop_host.cpp -o /tmp/uefi-gop-v2-host-asan
+compile exit=0
+compile stdout/stderr: empty
+
+$ /tmp/uefi-gop-v2-host-asan
+Execution: outside sandbox after approved escalation, because sandbox LeakSanitizer ptrace restriction prevents leak scanning.
+GOP host checks passed: 114 cases (real application and startup contract).
+run exit=0
+run sanitizer diagnostics: empty
+
+Captured final tool results: compile chunk 15e383, run chunk a573f3.

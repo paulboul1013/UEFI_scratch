@@ -1,0 +1,34 @@
+Toolchain / OVMF check: OK
+x86_64-w64-mingw32-g++ -nostdlib -ffreestanding -fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-asynchronous-unwind-tables -fno-stack-protector -mno-red-zone -fPIC -fPIE -fshort-wchar -c startup.cpp -o startup.o
+x86_64-w64-mingw32-g++ -nostdlib -ffreestanding -fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-asynchronous-unwind-tables -fno-stack-protector -mno-red-zone -fPIC -fPIE -fshort-wchar -c runtime.cpp -o runtime.o
+mkdir -p output/tests/
+x86_64-w64-mingw32-g++ -nostdlib -ffreestanding -fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-asynchronous-unwind-tables -fno-stack-protector -mno-red-zone -fPIC -fPIE -fshort-wchar -c tests/gop_qemu_probe.cpp -o output/tests/gop_qemu_probe.o
+x86_64-w64-mingw32-g++ -nostdlib -ffreestanding -Wl,-T,linker.ld -Wl,--image-base,0x400000 -Wl,-m,i386pep -Wl,--subsystem,10 -Wl,-e,_start startup.o runtime.o output/tests/gop_qemu_probe.o -o output/tests/GOP_PROBE.efi
+mkdir -p output/tests/probe-esp/EFI/BOOT
+cp output/tests/GOP_PROBE.efi output/tests/probe-esp/EFI/BOOT/BOOTX64.EFI
+Guest probe build complete: output/tests/GOP_PROBE.efi
+output/tests/GOP_PROBE.efi:                  PE32+ executable (EFI application) x86-64 (stripped to external PDB), for MS Windows, 5 sections
+output/tests/probe-esp/EFI/BOOT/BOOTX64.EFI: PE32+ executable (EFI application) x86-64 (stripped to external PDB), for MS Windows, 5 sections
+output/tests/GOP_PROBE.efi:     file format pei-x86-64
+AddressOfEntryPoint	0000000000001000
+ImageBase		0000000000400000
+MajorSubsystemVersion	5
+MinorSubsystemVersion	2
+Subsystem		0000000a	(EFI application)
+[ 90](sec -1)(fl 0x00)(ty    0)(scl   2) (nx 0) 0x0000000000400000 __ImageBase
+
+output/tests/GOP_PROBE.efi:     file format pei-x86-64
+
+Sections:
+Idx Name          Size      VMA               LMA               File off  Algn
+  0 .text         00002400  0000000000401000  0000000000401000  00000400  2**4
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+  1 .init_ar      00000008  0000000000403400  0000000000403400  00002800  2**2
+                  CONTENTS, ALLOC, LOAD, DATA
+  2 .rdata        000006d0  0000000000404000  0000000000404000  00002a00  2**4
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  3 .bss          00000130  0000000000405000  0000000000405000  00000000  2**4
+                  ALLOC
+  4 .reloc        00000018  0000000000406000  0000000000406000  00003200  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+All guest probe static checks passed.

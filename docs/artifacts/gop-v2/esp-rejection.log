@@ -1,0 +1,52 @@
+Toolchain / OVMF check: OK
+
+Build complete:
+  /tmp/uefi-gop-v2-independent-lt9s4o1d/build/output/BOOTX64.efi
+  /tmp/uefi-gop-v2-independent-lt9s4o1d/wrong-esp.EFI
+
+========== FILE FORMAT ==========
+/tmp/uefi-gop-v2-independent-lt9s4o1d/build/output/BOOTX64.efi: PE32+ executable (EFI application) x86-64 (stripped to external PDB), for MS Windows, 5 sections
+/tmp/uefi-gop-v2-independent-lt9s4o1d/wrong-esp.EFI: PE32+ executable (EFI application) x86-64 (stripped to external PDB), for MS Windows, 5 sections
+
+========== REQUIRED SYMBOLS ==========
+0000000000000000 T _start
+                 U efi_main
+0000000000001773 T efi_main
+
+Expected relationship:
+  startup.o : T _start
+  startup.o : U efi_main
+  main.o    : T efi_main
+
+========== PE HEADER ==========
+/tmp/uefi-gop-v2-independent-lt9s4o1d/build/output/BOOTX64.efi:     file format pei-x86-64
+AddressOfEntryPoint	0000000000001000
+ImageBase		0000000000400000
+MajorSubsystemVersion	5
+MinorSubsystemVersion	2
+Subsystem		0000000a	(EFI application)
+[ 84](sec -1)(fl 0x00)(ty    0)(scl   2) (nx 0) 0x0000000000400000 __ImageBase
+
+========== SECTIONS ==========
+
+/tmp/uefi-gop-v2-independent-lt9s4o1d/build/output/BOOTX64.efi:     file format pei-x86-64
+
+Sections:
+Idx Name          Size      VMA               LMA               File off  Algn
+  0 .text         00001c20  0000000000401000  0000000000401000  00000400  2**4
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+  1 .init_ar      00000008  0000000000402c20  0000000000402c20  00002200  2**2
+                  CONTENTS, ALLOC, LOAD, DATA
+  2 .rdata        00000570  0000000000403000  0000000000403000  00002400  2**4
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  3 .bss          00000130  0000000000404000  0000000000404000  00000000  2**4
+                  ALLOC
+  4 .reloc        00000018  0000000000405000  0000000000405000  00002a00  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+
+========== ESP ==========
+esp/EFI/BOOT/BOOTX64.EFI
+
+========== RESULT ==========
+cmp: EOF on /tmp/uefi-gop-v2-independent-lt9s4o1d/build/output/BOOTX64.efi after byte 15275, in line 23
+make: *** [Makefile:231: test] Error 1

@@ -1,0 +1,2 @@
+exit=-6
+FAIL [target ownership replacement pointers and full order] line 185: event("locate") < text_event("Global constructor")

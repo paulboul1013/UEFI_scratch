@@ -1,0 +1,12 @@
+{
+  "Makefile": "a12ef5a0b0e3efe7d02917ff93f3495ee6464fad729321bebdca3e53c0e6166a",
+  "linker.ld": "9b8d848c96bfb5bd11bd09f060fb5b054d486060e1178922972a6c1169f1c780",
+  "uefi.hpp": "9de6101ef66cfb5c2aaadbe9a27a1c3b8d78cc9e6a95436ef8ad9b83152bef16",
+  "runtime.hpp": "00a66a812bc43b419be8bdfd2902fdcb048acdeff70f285ecf51f426d2e824c1",
+  "startup.cpp": "08bcc99c02c719f91372b64d400cf7d83b654790dd673dfa4920dc41ed820d48",
+  "runtime.cpp": "7026d4b18eb0690ebb776922a12ef5bfc3a32fc514d244e7c39dc242bb19aed5",
+  "main.cpp": "cf264092546c22fb7dd01dc89571fb4ade7e946a9afe6c37a93631c01236bab6",
+  "tests/gop_host.cpp": "cebf7ab3d1d20679ada59f5facb9090f2177f6ec8374edc3eeeb84d8e45d8167",
+  "tests/gop_qemu.py": "88d335fde716b013e6f994d392aaef8eab568051888fcff1ac92c765e266e15c",
+  "tests/gop_qemu_probe.cpp": "446ea6e3b4087b0c51cbe4e38fee426bc6a5773f57b0e14d69aa28c6788fca0a"
+}
