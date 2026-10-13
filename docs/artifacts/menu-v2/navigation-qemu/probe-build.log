@@ -1,0 +1,18 @@
+make[1]: Entering directory '/tmp/uefi-menu-qemu-uojhu8ey/probe-build'
+Toolchain / OVMF check: OK
+mkdir -p output/menu
+x86_64-w64-mingw32-g++ -nostdlib -ffreestanding -fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-asynchronous-unwind-tables -fno-stack-protector -mno-red-zone -fPIC -fPIE -fshort-wchar -Wall -Wextra -Werror -c startup.cpp -o output/menu/startup.o
+mkdir -p output/menu
+x86_64-w64-mingw32-g++ -nostdlib -ffreestanding -fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-asynchronous-unwind-tables -fno-stack-protector -mno-red-zone -fPIC -fPIE -fshort-wchar -Wall -Wextra -Werror -c runtime.cpp -o output/menu/runtime.o
+mkdir -p output/menu
+x86_64-w64-mingw32-g++ -nostdlib -ffreestanding -fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-asynchronous-unwind-tables -fno-stack-protector -mno-red-zone -fPIC -fPIE -fshort-wchar -Wall -Wextra -Werror -c menu.cpp -o output/menu/menu.o
+mkdir -p output/menu
+x86_64-w64-mingw32-g++ -nostdlib -ffreestanding -fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-asynchronous-unwind-tables -fno-stack-protector -mno-red-zone -fPIC -fPIE -fshort-wchar -Wall -Wextra -Werror -c boot.cpp -o output/menu/boot.o
+mkdir -p output/menu/tests/
+x86_64-w64-mingw32-g++ -nostdlib -ffreestanding -fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-asynchronous-unwind-tables -fno-stack-protector -mno-red-zone -fPIC -fPIE -fshort-wchar -Wall -Wextra -Werror -c tests/menu_qemu_probe.cpp -o output/menu/tests/menu_qemu_probe.o
+x86_64-w64-mingw32-g++ -nostdlib -ffreestanding -Wl,-T,linker.ld -Wl,--image-base,0x400000 -Wl,-m,i386pep -Wl,--subsystem,10 -Wl,-e,_start output/menu/startup.o output/menu/runtime.o output/menu/menu.o output/menu/boot.o output/menu/tests/menu_qemu_probe.o -o output/menu/tests/MENU_PROBE.EFI
+mkdir -p output/menu/tests/probe-esp/EFI/BOOT/
+cp output/menu/tests/MENU_PROBE.EFI output/menu/tests/probe-esp/EFI/BOOT/BOOTX64.EFI
+Menu probe build complete: output/menu/tests/MENU_PROBE.EFI
+Menu image / ESP / symbols / entry checks passed.
+make[1]: Leaving directory '/tmp/uefi-menu-qemu-uojhu8ey/probe-build'

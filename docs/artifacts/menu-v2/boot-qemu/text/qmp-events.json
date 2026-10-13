@@ -1,0 +1,24 @@
+[
+  {
+    "timestamp": {
+      "seconds": 1791866585,
+      "microseconds": 108875
+    },
+    "event": "RTC_CHANGE",
+    "data": {
+      "offset": 0,
+      "qom-path": "/machine/unattached/device[3]/rtc"
+    }
+  },
+  {
+    "timestamp": {
+      "seconds": 1791866586,
+      "microseconds": 207432
+    },
+    "event": "RTC_CHANGE",
+    "data": {
+      "offset": 0,
+      "qom-path": "/machine/unattached/device[3]/rtc"
+    }
+  }
+]

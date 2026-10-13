@@ -99,7 +99,7 @@ void fini_observer()
 
 } // namespace
 
-extern "C" EFI_STATUS efi_main(EFI_HANDLE, EFI_SYSTEM_TABLE *table)
+extern "C" EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *table)
 {
     if (table == nullptr || table->ConOut == nullptr || table->ConOut->Mode == nullptr
         || table->ConOut->OutputString == nullptr || table->ConOut->QueryMode == nullptr
@@ -150,7 +150,7 @@ extern "C" EFI_STATUS efi_main(EFI_HANDLE, EFI_SYSTEM_TABLE *table)
     if (table->ConOut->SetCursorPosition(table->ConOut, 7, 3) != EFI_SUCCESS) {
         return fail(L"SeedCursor");
     }
-    EFI_STATUS status = menu_run(table);
+    EFI_STATUS status = menu_run(image_handle, table);
     if (status != EFI_SUCCESS) {
         return fail(L"MenuStatus");
     }

@@ -18,7 +18,8 @@ import zlib
 REPO = Path(__file__).resolve().parents[1]
 SOURCES = (
     "Makefile", "linker.ld", "uefi.hpp", "runtime.hpp", "startup.cpp",
-    "runtime.cpp", "menu.hpp", "menu.cpp", "station.cpp", "tests/menu_qemu_probe.cpp",
+    "runtime.cpp", "menu.hpp", "menu.cpp", "station.cpp", "boot.hpp", "boot.cpp",
+    "main.cpp", "tests/menu_qemu_probe.cpp",
 )
 OPTIONS = (
     "Select Language", "Device Manager", "Boot Manager", "Boot Maintenance Manager",
@@ -262,7 +263,7 @@ def write_png(path, width, height, pixels):
 
 
 def front(canvas, selected=0):
-    return ("UEFI Station 0.1" in canvas.text
+    return ("UEFI Station 0.2" in canvas.text
             and all(option in canvas.text for option in OPTIONS)
             and canvas.selected(OPTIONS[selected]))
 
@@ -333,7 +334,7 @@ def navigation_case(directory, esp, args):
             ("Current language: English", "Traditional Chinese: Not available yet"),
             ("Firmware Vendor:", "Firmware Revision:", "UEFI Revision:", "Text Mode:",
              "Graphics Mode:", "Resolution:", "Pixel Format:"),
-            ("Boot entry loading: Not available yet",),
+            ("GOP Demo", "Path: \\EFI\\TOOLS\\GOP.EFI", "Enter: Start"),
             ("Default Boot Entry: Not configured",),
             ("No default boot entry configured",),
         )

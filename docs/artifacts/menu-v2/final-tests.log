@@ -1,0 +1,100 @@
+Toolchain / OVMF check: OK
+Menu build complete: output/menu/BOOTX64.EFI
+Menu image / ESP / symbols / entry checks passed.
+mkdir -p output/menu/tests
+g++ -std=c++17 -fshort-wchar -Wall -Wextra -Werror tests/boot_host.cpp boot.cpp -o output/menu/tests/boot_host
+output/menu/tests/boot_host
+boot host: 53 cases passed
+mkdir -p output/menu/tests
+g++ -std=c++17 -fshort-wchar -Wall -Wextra -Werror tests/menu_host.cpp menu.cpp boot.cpp station.cpp -o output/menu/tests/menu_host
+output/menu/tests/menu_host
+Menu host checks passed: 132 cases (real menu, station, and startup contract).
+python3 tests/menu_qemu.py
+Artifacts: /tmp/uefi-menu-qemu-uojhu8ey
+PASS: clean-source make test-menu-static (/tmp/uefi-menu-qemu-uojhu8ey/build.log)
+PASS: clean-source make test-menu-probe (/tmp/uefi-menu-qemu-uojhu8ey/probe-build.log)
+PASS: production full layout, all seven selections, every child Esc, Reset Cancel/Esc, repeated redraw pixels, Return to Firmware
+PASS: main Esc, independent guest restored attribute=10 cursor=7,3 visible=1, unchanged text/GOP mode, subsequent runtime_fini
+LIMIT: this OVMF console exposes no supported single-column mode; small layout requires host-fixture coverage
+PASS: confirmed Restart caused a QMP guest-reset shutdown using independent ESP/VARS (-no-reboot)
+PASS: real -vga none, Graphics unavailable, serial text navigation and return
+Screenshots are unmodified QMP screendumps; PNG copies require visual review.
+python3 tests/menu_boot_qemu.py
+Artifacts: /tmp/uefi-menu-boot-qemu-3rxfy9rr
+PASS: clean-source build and separate production/test image hashes
+PASS: real parent handle, production GOP LoadImage/StartImage, 800x600 RGB, return
+PASS: production Station three GOP starts, per-round 800x600 RGB screenshots, list return, navigation, Reset Cancel, firmware return
+PASS: independent 2-second watchdog control produced actual QMP guest-reset
+PASS: DIRTY two real child entries/returns/finalizers, independent state before next wait, repeated start and final parent exit
+PASS: ERROR two real child entries/returns/finalizers, independent state before next wait, repeated start and final parent exit
+PASS: TEXT two real child entries/returns/finalizers, independent state before next wait, repeated start and final parent exit, no VGA
+PASS: missing per-VM payload, actual current-round Load status, retry and usable exit
+PASS: corrupt per-VM payload, actual current-round Load status, retry and usable exit
+Each VM retained its own ESP, VARS, exact command, serial log and QMP events. Unmodified PNG screenshots still require visual review.
+python3 tests/menu_boot_qemu.py --core-only
+Artifacts: /tmp/uefi-menu-boot-qemu-bv2xk_71
+PASS: clean-source build and separate production/test image hashes
+PASS: real parent handle, production GOP LoadImage/StartImage, 800x600 RGB, return
+cp output/BOOTX64.efi esp/EFI/BOOT/BOOTX64.EFI
+
+Build complete:
+  output/BOOTX64.efi
+  esp/EFI/BOOT/BOOTX64.EFI
+
+========== FILE FORMAT ==========
+output/BOOTX64.efi: PE32+ executable (EFI application) x86-64 (stripped to external PDB), for MS Windows, 5 sections
+esp/EFI/BOOT/BOOTX64.EFI: PE32+ executable (EFI application) x86-64 (stripped to external PDB), for MS Windows, 5 sections
+
+========== REQUIRED SYMBOLS ==========
+0000000000000000 T _start
+                 U efi_main
+0000000000001773 T efi_main
+
+Expected relationship:
+  startup.o : T _start
+  startup.o : U efi_main
+  main.o    : T efi_main
+
+========== PE HEADER ==========
+output/BOOTX64.efi:     file format pei-x86-64
+AddressOfEntryPoint	0000000000001000
+ImageBase		0000000000400000
+MajorSubsystemVersion	5
+MinorSubsystemVersion	2
+Subsystem		0000000a	(EFI application)
+[132](sec -1)(fl 0x00)(ty    0)(scl   2) (nx 0) 0x0000000000400000 __ImageBase
+
+========== SECTIONS ==========
+
+output/BOOTX64.efi:     file format pei-x86-64
+
+Sections:
+Idx Name          Size      VMA               LMA               File off  Algn
+  0 .text         00001c20  0000000000401000  0000000000401000  00000400  2**4
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+  1 .init_ar      00000010  0000000000402c20  0000000000402c20  00002200  2**2
+                  CONTENTS, ALLOC, LOAD, DATA
+  2 .rdata        000006b0  0000000000403000  0000000000403000  00002400  2**4
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  3 .bss          00000130  0000000000404000  0000000000404000  00000000  2**4
+                  ALLOC
+  4 .reloc        00000018  0000000000405000  0000000000405000  00002c00  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+
+========== ESP ==========
+esp/EFI/BOOT/BOOTX64.EFI
+
+========== RESULT ==========
+All static checks passed.
+mkdir -p output/tests
+g++ -std=c++17 -fshort-wchar -Wall -Wextra tests/gop_host.cpp -o output/tests/gop_host
+output/tests/gop_host
+GOP host checks passed: 114 cases (real application and startup contract).
+python3 tests/gop_qemu.py
+Artifacts: /tmp/uefi-gop-qemu-42_or9_g
+PASS: make test from clean sources (/tmp/uefi-gop-qemu-42_or9_g/build.log)
+PASS: make test-probe from clean sources (/tmp/uefi-gop-qemu-42_or9_g/probe-build.log)
+PASS: production, 800x600, RGB rectangles, stable wait, keyboard return
+PASS: guest probe, 800x600, RGB rectangles, stable wait, keyboard return
+PASS: independent guest observed restored mode=0 1280x800 format=1 after application return and before runtime_fini
+PASS: -vga none, EFI_NOT_FOUND, immediate firmware return

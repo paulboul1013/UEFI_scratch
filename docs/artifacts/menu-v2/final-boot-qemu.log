@@ -1,0 +1,12 @@
+python3 tests/menu_boot_qemu.py
+Artifacts: /tmp/uefi-menu-boot-qemu-smha9hou
+PASS: clean-source build and separate production/test image hashes
+PASS: real parent handle, production GOP LoadImage/StartImage, 800x600 RGB, return
+PASS: production Station three GOP starts, per-round 800x600 RGB screenshots, list return, navigation, Reset Cancel, firmware return
+PASS: independent 2-second watchdog control produced actual QMP guest-reset
+PASS: DIRTY two real child entries/returns/finalizers, independent state before next wait, repeated start and final parent exit
+PASS: ERROR two real child entries/returns/finalizers, independent state before next wait, repeated start and final parent exit
+PASS: TEXT two real child entries/returns/finalizers, independent state before next wait, repeated start and final parent exit, no VGA
+PASS: missing per-VM payload, actual current-round Load status, retry and usable exit
+PASS: corrupt per-VM payload, actual current-round Load status, retry and usable exit
+Each VM retained its own ESP, VARS, exact command, serial log and QMP events. Unmodified PNG screenshots still require visual review.

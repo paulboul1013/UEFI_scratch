@@ -1,0 +1,30 @@
+ UEFI Station 0.2
+ Firmware: Ubuntu distribution of EDK II
+ UEFI: 2.70   Text: 100x31   Graphics: 1280x800
+ --------------------------------------------------------------------------------------------------
+ Boot Maintenance Manager
+
+ Default Boot Entry: Not configured
+
+ Boot settings: Not available yet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ --------------------------------------------------------------------------------------------------
+ Esc: Back

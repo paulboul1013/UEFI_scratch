@@ -1,0 +1,59 @@
+red operation=0 returncode=-6 expected=True
+operation=0 actual_status=0x0000000000000000 waits=6 child_restore_lied=1
+FAIL [lying attribute] line 20: status == EFI_DEVICE_ERROR && f.waits == 4
+
+red operation=1 returncode=-6 expected=True
+operation=1 actual_status=0x0000000000000000 waits=6 child_restore_lied=1
+FAIL [lying cursor] line 20: status == EFI_DEVICE_ERROR && f.waits == 4
+
+red operation=2 returncode=-6 expected=True
+operation=2 actual_status=0x0000000000000000 waits=6 child_restore_lied=1
+FAIL [lying visibility] line 20: status == EFI_DEVICE_ERROR && f.waits == 4
+
+red operation=3 returncode=-6 expected=True
+Screen for [cleanup status priority]:
+ UEFI Station 0.2                                                               
+ Firmware: FixtureVendor-X                                                      
+ UEFI: 2.80   Text: 80x25   Graphics: 1366x768                                  
+ ------------------------------------------------------------------------------ 
+ Boot Manager                                                                   
+ Image cleanup required                                                         
+ > Retry cleanup                                                                
+   Reset                                                                        
+                                                                                
+ Status: 0x800000000000000F                                                     
+ Cleanup: 0x8000000000000007                                                    
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+ ------------------------------------------------------------------------------ 
+ Up/Down: Select  Enter: Confirm                                                
+                                                                                
+
+FAIL [cleanup status priority] line 73: Cleanup: 0x800000000000000F
+
+red operation=4 returncode=-6 expected=True
+actual_status=0x8000000000000001 unloads=2 waits=5
+FAIL [recovery wait priority] line 33: status == EFI_ABORTED
+
+green operation=0 returncode=0 expected=True
+operation=0 actual_status=0x8000000000000007 waits=4 child_restore_lied=1
+
+green operation=1 returncode=0 expected=True
+operation=1 actual_status=0x8000000000000007 waits=4 child_restore_lied=1
+
+green operation=2 returncode=0 expected=True
+operation=2 actual_status=0x8000000000000007 waits=4 child_restore_lied=1
+
+green operation=3 returncode=0 expected=True
+
+green operation=4 returncode=0 expected=True
+actual_status=0x8000000000000015 unloads=2 waits=5

@@ -1,0 +1,24 @@
+make[1]: Entering directory '/tmp/uefi-menu-qemu-uojhu8ey/build'
+Toolchain / OVMF check: OK
+mkdir -p output/menu
+x86_64-w64-mingw32-g++ -nostdlib -ffreestanding -fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-asynchronous-unwind-tables -fno-stack-protector -mno-red-zone -fPIC -fPIE -fshort-wchar -Wall -Wextra -Werror -c startup.cpp -o output/menu/startup.o
+mkdir -p output/menu
+x86_64-w64-mingw32-g++ -nostdlib -ffreestanding -fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-asynchronous-unwind-tables -fno-stack-protector -mno-red-zone -fPIC -fPIE -fshort-wchar -Wall -Wextra -Werror -c runtime.cpp -o output/menu/runtime.o
+mkdir -p output/menu
+x86_64-w64-mingw32-g++ -nostdlib -ffreestanding -fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-asynchronous-unwind-tables -fno-stack-protector -mno-red-zone -fPIC -fPIE -fshort-wchar -Wall -Wextra -Werror -c station.cpp -o output/menu/station.o
+mkdir -p output/menu
+x86_64-w64-mingw32-g++ -nostdlib -ffreestanding -fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-asynchronous-unwind-tables -fno-stack-protector -mno-red-zone -fPIC -fPIE -fshort-wchar -Wall -Wextra -Werror -c menu.cpp -o output/menu/menu.o
+mkdir -p output/menu
+x86_64-w64-mingw32-g++ -nostdlib -ffreestanding -fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-asynchronous-unwind-tables -fno-stack-protector -mno-red-zone -fPIC -fPIE -fshort-wchar -Wall -Wextra -Werror -c boot.cpp -o output/menu/boot.o
+x86_64-w64-mingw32-g++ -nostdlib -ffreestanding -Wl,-T,linker.ld -Wl,--image-base,0x400000 -Wl,-m,i386pep -Wl,--subsystem,10 -Wl,-e,_start output/menu/startup.o output/menu/runtime.o output/menu/station.o output/menu/menu.o output/menu/boot.o -o output/menu/BOOTX64.EFI
+mkdir -p output/menu/esp/EFI/BOOT/
+cp output/menu/BOOTX64.EFI output/menu/esp/EFI/BOOT/BOOTX64.EFI
+x86_64-w64-mingw32-g++ -nostdlib -ffreestanding -fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-asynchronous-unwind-tables -fno-stack-protector -mno-red-zone -fPIC -fPIE -fshort-wchar -c startup.cpp -o startup.o
+x86_64-w64-mingw32-g++ -nostdlib -ffreestanding -fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-asynchronous-unwind-tables -fno-stack-protector -mno-red-zone -fPIC -fPIE -fshort-wchar -c runtime.cpp -o runtime.o
+x86_64-w64-mingw32-g++ -nostdlib -ffreestanding -fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-asynchronous-unwind-tables -fno-stack-protector -mno-red-zone -fPIC -fPIE -fshort-wchar -c main.cpp -o main.o
+x86_64-w64-mingw32-g++ -nostdlib -ffreestanding -Wl,-T,linker.ld -Wl,--image-base,0x400000 -Wl,-m,i386pep -Wl,--subsystem,10 -Wl,-e,_start startup.o runtime.o main.o -o output/BOOTX64.efi
+mkdir -p output/menu/esp/EFI/TOOLS/
+cp output/BOOTX64.efi output/menu/esp/EFI/TOOLS/GOP.EFI
+Menu build complete: output/menu/BOOTX64.EFI
+Menu image / ESP / symbols / entry checks passed.
+make[1]: Leaving directory '/tmp/uefi-menu-qemu-uojhu8ey/build'

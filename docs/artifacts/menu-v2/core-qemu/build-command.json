@@ -1,0 +1,6 @@
+[
+  "make",
+  "build-boot-probe",
+  "OVMF_CODE_SRC=/usr/share/OVMF/OVMF_CODE_4M.fd",
+  "OVMF_VARS_SRC=/usr/share/OVMF/OVMF_VARS_4M.fd"
+]

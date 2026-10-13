@@ -1,0 +1,30 @@
+ UEFI Station 0.2
+ Firmware: Ubuntu distribution of EDK II
+ UEFI: 2.70   Text: 100x31   Graphics: 1280x800
+ --------------------------------------------------------------------------------------------------
+ Device Manager
+ Firmware Vendor: Ubuntu distribution of EDK II
+ Firmware Revision: 0x00010000
+ UEFI Revision: 2.70
+ Text Mode: 100x31
+ Graphics Mode: 0
+ Resolution: 1280x800
+ Pixel Format: BGR
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ --------------------------------------------------------------------------------------------------
+ Esc: Back

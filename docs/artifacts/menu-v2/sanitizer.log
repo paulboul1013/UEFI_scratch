@@ -1,0 +1,9 @@
+mkdir -p output/menu/tests
+Sanitizer: g++ boot
+boot host: 53 cases passed
+Sanitizer: g++ menu
+Menu host checks passed: 132 cases (real menu, station, and startup contract).
+Sanitizer: clang++ boot
+boot host: 53 cases passed
+Sanitizer: clang++ menu
+Menu host checks passed: 132 cases (real menu, station, and startup contract).

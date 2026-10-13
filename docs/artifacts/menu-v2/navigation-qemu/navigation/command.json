@@ -1,0 +1,22 @@
+[
+  "qemu-system-x86_64",
+  "-accel",
+  "tcg",
+  "-m",
+  "256M",
+  "-drive",
+  "if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.fd",
+  "-drive",
+  "if=pflash,format=raw,file=/tmp/uefi-menu-qemu-uojhu8ey/navigation/vars.fd",
+  "-drive",
+  "format=raw,file=fat:rw:/tmp/uefi-menu-qemu-uojhu8ey/navigation/esp",
+  "-display",
+  "none",
+  "-serial",
+  "file:/tmp/uefi-menu-qemu-uojhu8ey/navigation/serial.log",
+  "-qmp",
+  "stdio",
+  "-net",
+  "none",
+  "-no-reboot"
+]

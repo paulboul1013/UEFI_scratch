@@ -1,0 +1,30 @@
+ UEFI Station 0.2
+ Firmware: Ubuntu distribution of EDK II
+ UEFI: 2.70   Text: 100x31   Graphics: 1280x800
+ --------------------------------------------------------------------------------------------------
+ > Select Language                 |  Select the language used by this application. English is
+   Device Manager                  |  available in this version.
+   Boot Manager                    |
+   Boot Maintenance Manager        |
+   Continue                        |
+   Reset                           |
+   Return to Firmware              |
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ --------------------------------------------------------------------------------------------------
+ Up/Down: Select    Enter: Open    Esc: Back / Return

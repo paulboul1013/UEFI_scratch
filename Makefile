@@ -40,10 +40,11 @@ PROBE_ESP_DIR    := output/tests/probe-esp/EFI/BOOT
 PROBE_ESP_TARGET := $(PROBE_ESP_DIR)/BOOTX64.EFI
 
 MENU_DIR        := output/menu
-MENU_OBJECTS    := $(MENU_DIR)/startup.o $(MENU_DIR)/runtime.o $(MENU_DIR)/station.o $(MENU_DIR)/menu.o
+MENU_OBJECTS    := $(MENU_DIR)/startup.o $(MENU_DIR)/runtime.o $(MENU_DIR)/station.o $(MENU_DIR)/menu.o $(MENU_DIR)/boot.o
 MENU_TARGET     := $(MENU_DIR)/BOOTX64.EFI
 MENU_ESP        := $(MENU_DIR)/esp
 MENU_ESP_TARGET := $(MENU_ESP)/EFI/BOOT/BOOTX64.EFI
+MENU_GOP_TARGET := $(MENU_ESP)/EFI/TOOLS/GOP.EFI
 MENU_VARS       := $(MENU_DIR)/OVMF_VARS_4M.fd
 MENU_PROBE_OBJECT := $(MENU_DIR)/tests/menu_qemu_probe.o
 MENU_PROBE_TARGET := $(MENU_DIR)/tests/MENU_PROBE.EFI
@@ -289,7 +290,7 @@ test-gop:
 	python3 tests/gop_qemu.py
 
 # Menu has separate objects, entry point, ESP and writable firmware variables.
-$(MENU_DIR)/%.o: %.cpp uefi.hpp runtime.hpp menu.hpp
+$(MENU_DIR)/%.o: %.cpp uefi.hpp runtime.hpp menu.hpp boot.hpp
 	mkdir -p $(MENU_DIR)
 	$(CXX) $(CXXFLAGS) -Wall -Wextra -Werror -c $< -o $@
 
@@ -297,6 +298,10 @@ $(MENU_TARGET): $(MENU_OBJECTS) $(LINKER_SCRIPT)
 	$(CXX) $(LDFLAGS) $(MENU_OBJECTS) -o $@
 
 $(MENU_ESP_TARGET): $(MENU_TARGET)
+	mkdir -p $(dir $@)
+	cp $< $@
+
+$(MENU_GOP_TARGET): $(TARGET)
 	mkdir -p $(dir $@)
 	cp $< $@
 
@@ -308,15 +313,15 @@ $(MENU_PROBE_OBJECT): tests/menu_qemu_probe.cpp uefi.hpp menu.hpp runtime.hpp
 	mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -Wall -Wextra -Werror -c $< -o $@
 
-$(MENU_PROBE_TARGET): $(MENU_DIR)/startup.o $(MENU_DIR)/runtime.o $(MENU_DIR)/menu.o $(MENU_PROBE_OBJECT) $(LINKER_SCRIPT)
-	$(CXX) $(LDFLAGS) $(MENU_DIR)/startup.o $(MENU_DIR)/runtime.o $(MENU_DIR)/menu.o $(MENU_PROBE_OBJECT) -o $@
+$(MENU_PROBE_TARGET): $(MENU_DIR)/startup.o $(MENU_DIR)/runtime.o $(MENU_DIR)/menu.o $(MENU_DIR)/boot.o $(MENU_PROBE_OBJECT) $(LINKER_SCRIPT)
+	$(CXX) $(LDFLAGS) $(MENU_DIR)/startup.o $(MENU_DIR)/runtime.o $(MENU_DIR)/menu.o $(MENU_DIR)/boot.o $(MENU_PROBE_OBJECT) -o $@
 
 $(MENU_PROBE_ESP_TARGET): $(MENU_PROBE_TARGET)
 	mkdir -p $(dir $@)
 	cp $< $@
 
 .PHONY: build-menu run-menu test-menu-static test-menu-host test-menu-qemu test-menu build-menu-probe test-menu-probe
-build-menu: check-tools $(MENU_ESP_TARGET)
+build-menu: check-tools $(MENU_ESP_TARGET) $(MENU_GOP_TARGET)
 	@echo "Menu build complete: $(MENU_TARGET)"
 
 run-menu: build-menu $(MENU_VARS)
@@ -326,6 +331,10 @@ run-menu: build-menu $(MENU_VARS)
 # Reuse the same assertions for production and the independent guest observer.
 test-menu-static: build-menu
 	@$(MAKE) --no-print-directory menu-image-check MENU_CHECK_TARGET=$(MENU_TARGET) MENU_CHECK_ESP=$(MENU_ESP_TARGET) MENU_CHECK_OBJECT=$(MENU_DIR)/station.o
+	@cmp $(TARGET) $(MENU_GOP_TARGET)
+	@! cmp -s $(MENU_TARGET) $(MENU_GOP_TARGET) || { echo 'ERROR: GOP child is Station'; exit 1; }
+	@test "$$($(NM) $(TARGET) | grep -cE '[[:space:]]T[[:space:]]+efi_main$$')" -eq 1
+	@! $(NM) -u $(MENU_DIR)/menu.o $(MENU_DIR)/boot.o | grep -E 'chkstk|memcpy|memset|malloc|__cxa|_ZSt' || { echo 'ERROR: menu requires a hosted helper'; exit 1; }
 
 build-menu-probe: check-tools $(MENU_PROBE_ESP_TARGET)
 	@echo "Menu probe build complete: $(MENU_PROBE_TARGET)"
@@ -352,13 +361,78 @@ menu-image-check:
 
 test-menu-host:
 	mkdir -p $(MENU_DIR)/tests
-	$(HOST_CXX) -std=c++17 -fshort-wchar -Wall -Wextra -Werror tests/menu_host.cpp menu.cpp station.cpp -o $(MENU_DIR)/tests/menu_host
+	$(HOST_CXX) -std=c++17 -fshort-wchar -Wall -Wextra -Werror tests/menu_host.cpp menu.cpp boot.cpp station.cpp -o $(MENU_DIR)/tests/menu_host
 	$(MENU_DIR)/tests/menu_host
 
 test-menu-qemu:
 	python3 tests/menu_qemu.py
 
-test-menu: test-menu-static test-menu-host test-menu-qemu
+test-menu: test-menu-static test-boot-host test-menu-host test-menu-qemu test-menu-boot-qemu
+
+.PHONY: test-boot-host test-boot-qemu test-menu-boot-qemu
+test-boot-host:
+	mkdir -p $(MENU_DIR)/tests
+	$(HOST_CXX) -std=c++17 -fshort-wchar -Wall -Wextra -Werror tests/boot_host.cpp boot.cpp -o $(MENU_DIR)/tests/boot_host
+	$(MENU_DIR)/tests/boot_host
+
+test-boot-qemu:
+	python3 tests/menu_boot_qemu.py --core-only
+
+test-menu-boot-qemu:
+	python3 tests/menu_boot_qemu.py
+
+.PHONY: test-menu-sanitize
+test-menu-sanitize:
+	mkdir -p $(MENU_DIR)/tests
+	@for compiler in g++ clang++; do \
+		for suite in boot menu; do \
+			files='tests/boot_host.cpp boot.cpp'; \
+			if test "$$suite" = menu; then files='tests/menu_host.cpp menu.cpp boot.cpp station.cpp'; fi; \
+			binary="$(MENU_DIR)/tests/$$suite-$$compiler-sanitize"; \
+			$$compiler -std=c++17 -fshort-wchar -Wall -Wextra -Werror \
+				-fsanitize=address,undefined -fno-omit-frame-pointer $$files -o "$$binary" || exit 1; \
+			echo "Sanitizer: $$compiler $$suite"; \
+			ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1 "$$binary" || exit 1; \
+		done; \
+	done
+
+# Test EFI applications have separate entry points and never alter product sources.
+BOOT_TEST_DIR := $(MENU_DIR)/tests
+BOOT_COMMON := $(MENU_DIR)/startup.o $(MENU_DIR)/runtime.o
+
+$(BOOT_TEST_DIR)/boot_probe.o: tests/boot_probe.cpp boot.hpp uefi.hpp runtime.hpp
+	mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -Wall -Wextra -Werror -c $< -o $@
+
+$(BOOT_TEST_DIR)/BOOT_PROBE.EFI: $(BOOT_COMMON) $(MENU_DIR)/boot.o $(BOOT_TEST_DIR)/boot_probe.o $(LINKER_SCRIPT)
+	$(CXX) $(LDFLAGS) $(filter %.o,$^) -o $@
+
+$(BOOT_TEST_DIR)/menu_boot_probe.o: tests/menu_boot_probe.cpp boot.hpp menu.hpp uefi.hpp runtime.hpp
+	mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -Wall -Wextra -Werror -c $< -o $@
+
+$(BOOT_TEST_DIR)/MENU_BOOT_PROBE.EFI: $(BOOT_COMMON) $(MENU_DIR)/boot.o $(MENU_DIR)/menu.o $(BOOT_TEST_DIR)/menu_boot_probe.o $(LINKER_SCRIPT)
+	$(CXX) $(LDFLAGS) $(filter %.o,$^) -o $@
+
+.PHONY: build-boot-probe build-menu-boot-probe build-boot-children
+build-boot-probe: check-tools $(BOOT_TEST_DIR)/BOOT_PROBE.EFI $(TARGET)
+	mkdir -p $(BOOT_TEST_DIR)/boot-probe-esp/EFI/BOOT $(BOOT_TEST_DIR)/boot-probe-esp/EFI/TOOLS
+	cp $(BOOT_TEST_DIR)/BOOT_PROBE.EFI $(BOOT_TEST_DIR)/boot-probe-esp/EFI/BOOT/BOOTX64.EFI
+	cp $(TARGET) $(BOOT_TEST_DIR)/boot-probe-esp/EFI/TOOLS/GOP.EFI
+
+build-menu-boot-probe: check-tools $(BOOT_TEST_DIR)/MENU_BOOT_PROBE.EFI $(TARGET)
+	mkdir -p $(BOOT_TEST_DIR)/boot-observer-esp/EFI/BOOT $(BOOT_TEST_DIR)/boot-observer-esp/EFI/TOOLS
+	cp $(BOOT_TEST_DIR)/MENU_BOOT_PROBE.EFI $(BOOT_TEST_DIR)/boot-observer-esp/EFI/BOOT/BOOTX64.EFI
+	cp $(TARGET) $(BOOT_TEST_DIR)/boot-observer-esp/EFI/TOOLS/GOP.EFI
+
+$(BOOT_TEST_DIR)/BOOT_%.o: tests/boot_child.cpp uefi.hpp runtime.hpp
+	mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -Wall -Wextra -Werror -DBOOT_CHILD_$* -c $< -o $@
+
+$(BOOT_TEST_DIR)/BOOT_%.EFI: $(BOOT_TEST_DIR)/BOOT_%.o $(BOOT_COMMON) $(LINKER_SCRIPT)
+	$(CXX) $(LDFLAGS) $(filter %.o,$^) -o $@
+
+build-boot-children: $(addprefix $(BOOT_TEST_DIR)/BOOT_,DIRTY.EFI ERROR.EFI TEXT.EFI WATCHDOG_HOLD.EFI)
 
 # ------------------------------------------------------------
 # Inspection helpers
@@ -427,6 +501,10 @@ clean:
 	rm -f $(TARGET)
 	rm -f $(ESP_TARGET)
 	rm -f $(MENU_OBJECTS) $(MENU_TARGET) $(MENU_ESP_TARGET) $(MENU_PROBE_OBJECT) $(MENU_PROBE_TARGET) $(MENU_PROBE_ESP_TARGET) $(MENU_DIR)/tests/menu_host
+	rm -f $(MENU_GOP_TARGET) $(BOOT_TEST_DIR)/boot_host $(BOOT_TEST_DIR)/boot_probe.o $(BOOT_TEST_DIR)/menu_boot_probe.o
+	rm -f $(BOOT_TEST_DIR)/BOOT_PROBE.EFI $(BOOT_TEST_DIR)/MENU_BOOT_PROBE.EFI $(BOOT_TEST_DIR)/BOOT_*.EFI $(BOOT_TEST_DIR)/BOOT_*.o $(BOOT_TEST_DIR)/*-sanitize
+	rm -f $(BOOT_TEST_DIR)/boot-probe-esp/EFI/BOOT/BOOTX64.EFI $(BOOT_TEST_DIR)/boot-probe-esp/EFI/TOOLS/GOP.EFI
+	rm -f $(BOOT_TEST_DIR)/boot-observer-esp/EFI/BOOT/BOOTX64.EFI $(BOOT_TEST_DIR)/boot-observer-esp/EFI/TOOLS/GOP.EFI
 
 .PHONY: distclean
 distclean: clean
@@ -461,6 +539,10 @@ help:
 	@echo "  make run-menu       Boot the menu with its own OVMF VARS"
 	@echo "  make test-menu      Menu static, host and clean-source QEMU checks"
 	@echo "  make test-menu-static / test-menu-host / test-menu-qemu"
+	@echo "  make test-boot-host  Check source paths, lifecycle and watchdog with fake firmware"
+	@echo "  make test-boot-qemu  Verify real production GOP loading through BootLoader"
+	@echo "  make test-menu-boot-qemu  Verify menu launches, restoration and real watchdog"
+	@echo "  make test-menu-sanitize  Run boot/menu with GCC and Clang ASan/UBSan/leak checks"
 	@echo "  make run            Build and boot with QEMU + OVMF"
 	@echo "  make run-clean      Reset OVMF VARS, then boot"
 	@echo "  make debug          Run QEMU with GDB stub (:1234), CPU paused"

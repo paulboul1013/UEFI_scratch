@@ -29,9 +29,10 @@
 | Object 如何變成 EFI executable？ | linker.ld、PE32+、section、symbol、relocation、entry point | [Linker、PE32+ 與 Entry Point](knowledge/linker.md) |
 | 全域建構子與清理何時執行？ | _start、efi_main、init_array、atexit、runtime_fini | [C++ runtime 與生命週期](knowledge/runtime.md) |
 | 如何輸出文字並等待鍵盤？ | System Table、ConOut、ConIn、OutputString、WaitForEvent | [System Table、Console 與鍵盤](knowledge/console.md) |
-| 如何操作平台選單、查看韌體資訊或重新啟動？ | menu、選單、ResetSystem、watchdog、Return to Firmware | [UEFI Station 文字選單](knowledge/menu.md) |
+| 如何操作平台選單、查看韌體資訊或重新啟動？ | menu、選單、Boot Manager、LoadImage、StartImage、ResetSystem、watchdog | [UEFI Station 文字選單](knowledge/menu.md) |
 | 如何列舉 GOP、切換模式、恢復與畫色塊？ | QueryMode、FreePool、SetMode、ClearScreen、restore、Blt | [GOP 模式與 BLT 繪圖](knowledge/gop.md) |
 | 如何建立 ESP 與啟動虛擬機？ | FAT、BOOTX64.EFI、OVMF、QEMU、VARS、NVRAM | [ESP、OVMF 與 QEMU](knowledge/qemu.md) |
+| 為何一開 QEMU 就看到自訂文字與三色塊？ | 自動開機、Boot Manager、BootOrder、BOOTX64.EFI、_start、efi_main | [自動開機與畫面來源](knowledge/qemu.md#為何啟動-qemu-就顯示自訂畫面) |
 | 如何跑測試、看 log 或檢查 PE？ | make test、test-host、test-gop、serial、QMP、PPM、nm、objdump、GDB | [驗證與 Debug](knowledge/testing.md) |
 | 建置或啟動失敗時如何排查？ | multiple definition、undefined reference、init_array、linker warning | [問題排查](knowledge/troubleshooting.md) |
 
@@ -55,15 +56,14 @@ rg -n 'atexit|constructor|destructor' docs/knowledge
 | 2026-10-08 | GOP 查詢、解析度與三色塊 | 已完成；`6b74ffc` | [GOP 第一版](history/gop-v1.md) |
 | 2026-10-12 | GOP 列舉、800×600、恢復與驗證 | 已完成實作、自動驗收與人工測試 | [GOP 第二版](history/gop-v2.md) · [核定計畫](history/gop-v2-plan.md) |
 | 2026-10-12 | 文字選單、資訊頁、Reset 與 console 恢復 | 已完成實作、多 agent review 與交叉驗證 | [選單第一版](history/menu-v1.md) · [規格與計畫](plans/menu-v1.md) |
+| 2026-10-13 | Boot Manager、EFI 子映像與返回恢復 | 已完成實作、多 subagent review、host／OVMF 驗收與人工測試 | [選單第二版](history/menu-v2.md) · [核定計畫](plans/menu-v2.md) |
 
 Commit 是當時程式的依據。文件內連到工作目錄的原始碼，則是目前版本。
 歷史驗收結果不能當成每次文件更新後都重新執行的測試結果。
 
 ## 待實作計畫
 
-| 計畫 | 狀態 | 內容 |
-|---|---|---|
-| 無 | — | 選單第一版已完成，規格仍保留於原 [計畫路徑](plans/menu-v1.md) |
+目前沒有待實作的核定計畫；[Menu v2](plans/menu-v2.md) 已完成並列入歷史紀錄。
 
 ## 尚未實作的方向
 
@@ -108,3 +108,7 @@ README 保留專案介紹、快速操作與文件入口。此次變更只整理�
 ### 2026-10-12：GOP 第二版實作與驗收
 
 完成模式列舉、800×600 選擇、切換後驗證與統一恢復出口。更新 GOP、測試與架構知識頁，保留原 README 拆分與第一版歷史。事前計畫與核心測試 log / 截圖另存專案，完整 /tmp 產物路徑列於第二版完成紀錄。
+
+### 2026-10-12：補充自動開機知識
+
+將「啟動 QEMU 後直接看到自訂 UEFI 畫面」的說明整理到 [QEMU 知識頁](knowledge/qemu.md#為何啟動-qemu-就顯示自訂畫面)。補充 QEMU、OVMF 與應用程式的分工、主機目錄與預設開機路徑、映像入口與畫面呼叫鏈，以及 BootOrder / VARS 的用途。保留手動開機操作，新增查詢入口與規格、原始碼及 serial 證據連結。

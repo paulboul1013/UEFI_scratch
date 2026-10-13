@@ -36,6 +36,12 @@ constexpr EFI_STATUS EFI_INVALID_PARAMETER = (1ULL << 63) | 2;
 constexpr EFI_STATUS EFI_NOT_READY = (1ULL << 63) | 6;
 constexpr EFI_STATUS EFI_DEVICE_ERROR = (1ULL << 63) | 7;
 constexpr EFI_STATUS EFI_NOT_FOUND = (1ULL << 63) | 14;
+constexpr EFI_STATUS EFI_LOAD_ERROR = (1ULL << 63) | 1;
+constexpr EFI_STATUS EFI_OUT_OF_RESOURCES = (1ULL << 63) | 9;
+constexpr EFI_STATUS EFI_ACCESS_DENIED = (1ULL << 63) | 15;
+constexpr EFI_STATUS EFI_ALREADY_STARTED = (1ULL << 63) | 20;
+constexpr EFI_STATUS EFI_ABORTED = (1ULL << 63) | 21;
+constexpr EFI_STATUS EFI_SECURITY_VIOLATION = (1ULL << 63) | 26;
 
 
 // 我們使用 x86_64-w64-mingw32-g++
@@ -68,6 +74,57 @@ struct EFI_RUNTIME_SERVICES;
 struct EFI_BOOT_SERVICES;
 
 struct EFI_CONFIGURATION_TABLE;
+struct EFI_SYSTEM_TABLE;
+
+// Device path headers use byte-sized length fields and may be unaligned.
+struct EFI_DEVICE_PATH_PROTOCOL {
+    UINT8 Type;
+    UINT8 SubType;
+    UINT8 Length[2];
+};
+
+constexpr EFI_GUID EFI_DEVICE_PATH_PROTOCOL_GUID = {
+    0x09576e91, 0x6d3f, 0x11d2,
+    {0x8e, 0x39, 0x00, 0xa0, 0xc9, 0x69, 0x72, 0x3b}
+};
+constexpr EFI_GUID EFI_LOADED_IMAGE_PROTOCOL_GUID = {
+    0x5b1b31a1, 0x9562, 0x11d2,
+    {0x8e, 0x3f, 0x00, 0xa0, 0xc9, 0x69, 0x72, 0x3b}
+};
+constexpr UINT8 MEDIA_DEVICE_PATH = 0x04;
+constexpr UINT8 MEDIA_FILEPATH_DP = 0x04;
+constexpr UINT8 END_DEVICE_PATH_TYPE = 0x7f;
+constexpr UINT8 END_INSTANCE_DEVICE_PATH_SUBTYPE = 0x01;
+constexpr UINT8 END_ENTIRE_DEVICE_PATH_SUBTYPE = 0xff;
+constexpr UINT32 EFI_OPEN_PROTOCOL_GET_PROTOCOL = 0x00000002;
+constexpr UINT32 EFI_OPEN_PROTOCOL_TEST_PROTOCOL = 0x00000004;
+
+enum EFI_MEMORY_TYPE : UINT32 {
+    EfiReservedMemoryType, EfiLoaderCode, EfiLoaderData,
+    EfiBootServicesCode, EfiBootServicesData, EfiRuntimeServicesCode,
+    EfiRuntimeServicesData, EfiConventionalMemory, EfiUnusableMemory,
+    EfiACPIReclaimMemory, EfiACPIMemoryNVS, EfiMemoryMappedIO,
+    EfiMemoryMappedIOPortSpace, EfiPalCode, EfiPersistentMemory,
+    EfiUnacceptedMemoryType, EfiMaxMemoryType
+};
+
+using EFI_IMAGE_UNLOAD = EFI_STATUS (EFIAPI *)(EFI_HANDLE ImageHandle);
+
+struct EFI_LOADED_IMAGE_PROTOCOL {
+    UINT32 Revision;
+    EFI_HANDLE ParentHandle;
+    EFI_SYSTEM_TABLE *SystemTable;
+    EFI_HANDLE DeviceHandle;
+    EFI_DEVICE_PATH_PROTOCOL *FilePath;
+    void *Reserved;
+    UINT32 LoadOptionsSize;
+    void *LoadOptions;
+    void *ImageBase;
+    UINT64 ImageSize;
+    EFI_MEMORY_TYPE ImageCodeType;
+    EFI_MEMORY_TYPE ImageDataType;
+    EFI_IMAGE_UNLOAD Unload;
+};
 
 
 // ============================================================
@@ -307,6 +364,17 @@ using EFI_LOCATE_PROTOCOL =
 using EFI_SET_WATCHDOG_TIMER = EFI_STATUS (EFIAPI *)(
     UINTN Timeout, UINT64 WatchdogCode, UINTN DataSize, CHAR16 *WatchdogData);
 
+using EFI_OPEN_PROTOCOL = EFI_STATUS (EFIAPI *)(
+    EFI_HANDLE Handle, EFI_GUID *Protocol, void **Interface,
+    EFI_HANDLE AgentHandle, EFI_HANDLE ControllerHandle, UINT32 Attributes);
+using EFI_LOAD_IMAGE = EFI_STATUS (EFIAPI *)(
+    BOOLEAN BootPolicy, EFI_HANDLE ParentImageHandle,
+    EFI_DEVICE_PATH_PROTOCOL *DevicePath, void *SourceBuffer, UINTN SourceSize,
+    EFI_HANDLE *ImageHandle);
+using EFI_START_IMAGE = EFI_STATUS (EFIAPI *)(
+    EFI_HANDLE ImageHandle, UINTN *ExitDataSize, CHAR16 **ExitData);
+using EFI_UNLOAD_IMAGE = EFI_STATUS (EFIAPI *)(EFI_HANDLE ImageHandle);
+
 
 struct EFI_BOOT_SERVICES {
     EFI_TABLE_HEADER Hdr;
@@ -343,10 +411,10 @@ struct EFI_BOOT_SERVICES {
     EFI_GENERIC_FN InstallConfigurationTable;
 
     // Image Services
-    EFI_GENERIC_FN LoadImage;
-    EFI_GENERIC_FN StartImage;
+    EFI_LOAD_IMAGE LoadImage;
+    EFI_START_IMAGE StartImage;
     EFI_GENERIC_FN Exit;
-    EFI_GENERIC_FN UnloadImage;
+    EFI_UNLOAD_IMAGE UnloadImage;
     EFI_GENERIC_FN ExitBootServices;
 
     // Miscellaneous Services
@@ -359,7 +427,7 @@ struct EFI_BOOT_SERVICES {
     EFI_GENERIC_FN DisconnectController;
 
     // Open and Close Protocol Services
-    EFI_GENERIC_FN OpenProtocol;
+    EFI_OPEN_PROTOCOL OpenProtocol;
     EFI_GENERIC_FN CloseProtocol;
     EFI_GENERIC_FN OpenProtocolInformation;
     EFI_GENERIC_FN ProtocolsPerHandle;
@@ -430,6 +498,19 @@ static_assert(
 
 // GOP 與 Boot Services 的 x86_64 ABI 驗收值。
 static_assert(sizeof(EFI_GUID) == 16);
+static_assert(sizeof(EFI_DEVICE_PATH_PROTOCOL) == 4);
+static_assert(sizeof(EFI_MEMORY_TYPE) == 4);
+static_assert(sizeof(EFI_LOADED_IMAGE_PROTOCOL) == 96);
+static_assert(__builtin_offsetof(EFI_LOADED_IMAGE_PROTOCOL, DeviceHandle) == 24);
+static_assert(__builtin_offsetof(EFI_LOADED_IMAGE_PROTOCOL, FilePath) == 32);
+static_assert(__builtin_offsetof(EFI_LOADED_IMAGE_PROTOCOL, LoadOptionsSize) == 48);
+static_assert(__builtin_offsetof(EFI_LOADED_IMAGE_PROTOCOL, LoadOptions) == 56);
+static_assert(__builtin_offsetof(EFI_LOADED_IMAGE_PROTOCOL, ImageCodeType) == 80);
+static_assert(__builtin_offsetof(EFI_LOADED_IMAGE_PROTOCOL, Unload) == 88);
+static_assert(__builtin_offsetof(EFI_BOOT_SERVICES, LoadImage) == 200);
+static_assert(__builtin_offsetof(EFI_BOOT_SERVICES, StartImage) == 208);
+static_assert(__builtin_offsetof(EFI_BOOT_SERVICES, UnloadImage) == 224);
+static_assert(__builtin_offsetof(EFI_BOOT_SERVICES, OpenProtocol) == 280);
 static_assert(sizeof(CHAR16) == 2);
 static_assert(sizeof(EFI_SIMPLE_TEXT_OUTPUT_MODE) == 24);
 static_assert(__builtin_offsetof(EFI_SIMPLE_TEXT_OUTPUT_MODE, CursorVisible) == 20);
